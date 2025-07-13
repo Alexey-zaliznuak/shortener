@@ -14,3 +14,6 @@ build:
 
 run:
 	./cmd/shortener/shortener.exe
+
+st:
+	./shortenertest -test.v -test.run=^TestIteration1$ -binary-path=cmd/shortener/shortener.exe

@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"math/rand"
+	"net/url"
 	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
@@ -24,6 +25,10 @@ func (s *LinksService) GetFullUrlFromShort(shortUrl string) (string, error) {
 }
 
 func (s *LinksService) CreateLink(link *model.Link) error {
+	if !s.isValidURL(link.FullUrl) {
+		return fmt.Errorf("create link error: invalid url: '%s'", link.FullUrl)
+	}
+
 	if link.ShortUrl == "" {
 		link.ShortUrl = s.generateShortLink(config.Config.ShortLinksLength)
 	}
@@ -42,6 +47,19 @@ func (s *LinksService) generateShortLink(length int) string {
 		result[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(result)
+}
+
+func (s *LinksService) isValidURL(u string) bool {
+	parsedURL, err := url.ParseRequestURI(u)
+	if err != nil {
+		return false
+	}
+
+	if parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return false
+	}
+
+	return true
 }
 
 func NewLinksService(client *gorm.DB) *LinksService {

@@ -34,7 +34,12 @@ func createLink(res http.ResponseWriter, req *http.Request) {
 	}
 
 	link := &model.Link{FullUrl: string(body)}
-	linksService.CreateLink(link)
+	err = linksService.CreateLink(link)
+
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	res.Write([]byte(link.ShortUrl))
 }
