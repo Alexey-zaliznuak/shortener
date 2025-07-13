@@ -16,7 +16,7 @@ type Link struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	FullUrl  string `gorm:"uniqueIndex;not null"`
+	FullUrl  string `gorm:"index;not null"`
 	ShortUrl string `gorm:"uniqueIndex;not null;size:8"`
 }
 

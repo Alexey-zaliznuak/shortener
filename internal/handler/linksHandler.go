@@ -40,7 +40,7 @@ func createLink(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	res.WriteHeader(http.StatusCreated)
 	res.Write([]byte(link.ShortUrl))
 }
 

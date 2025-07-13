@@ -33,6 +33,16 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 		link.ShortUrl = s.generateShortLink(config.Config.ShortLinksLength)
 	}
 
+	flag := true
+	for flag {
+		_, err := s.repository.GetByShortUrl(link.ShortUrl)
+		if err == nil {
+			link.ShortUrl = s.generateShortLink(config.Config.ShortLinksLength)
+			continue
+		}
+		flag = false
+	}
+
 	return s.repository.Create(link)
 }
 

@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"errors"
-
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"gorm.io/gorm"
 )
@@ -20,9 +18,6 @@ func (r *LinkRepository) GetByShortUrl(shortUrl string) (*model.Link, error) {
 	err := r.Client.Where("short_url = ?", shortUrl).First(link).Error
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
 		return nil, err
 	}
 

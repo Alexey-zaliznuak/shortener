@@ -12,6 +12,9 @@ build_and_run:
 build:
 	go build -o $(MAIN) $(MAIN)
 
+test:
+	go test -v ./...
+
 run:
 	./cmd/shortener/shortener.exe
 
