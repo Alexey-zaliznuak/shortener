@@ -19,4 +19,4 @@ run:
 	./cmd/shortener/shortener.exe
 
 st:
-	./shortenertest -test.v -test.run=^TestIteration1$ -binary-path=cmd/shortener/shortener.exe
+	./shortenertest-windows-amd64 -test.v -test.run=^TestIteration1 -binary-path=cmd/shortener/shortener.exe

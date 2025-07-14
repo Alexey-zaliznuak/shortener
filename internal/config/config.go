@@ -11,6 +11,8 @@ import (
 type AppConfig struct {
 	db.DatabaseConfig
 	ShortLinksLength int
+	Port             int
+	RedirectHostUrl  string
 }
 
 var Config = func() AppConfig {
@@ -18,7 +20,21 @@ var Config = func() AppConfig {
 
 	if err != nil {
 		ShortLinksLength = 8
-		fmt.Println("configuration warning: 'SHORT_LINKS_LENGTH' not specified")
+		fmt.Printf("configuration warning: 'SHORT_LINKS_LENGTH' not specified, use default: %d\n", ShortLinksLength)
+	}
+
+	Port, err := strconv.Atoi(os.Getenv("PORT"))
+
+	if err != nil {
+		Port = 8080
+		fmt.Printf("configuration warning: 'PORT' not specified, use default: %d\n", Port)
+	}
+
+	RedirectHostUrl := os.Getenv("REDIRECT_HOST_URL")
+
+	if RedirectHostUrl == "" {
+		RedirectHostUrl = "http://localhost:" + strconv.Itoa(Port) + "/"
+		fmt.Printf("configuration warning: 'REDIRECT_HOST_URL' not specified, use default: %s\n", RedirectHostUrl)
 	}
 
 	if ShortLinksLength < 0 {
@@ -28,5 +44,7 @@ var Config = func() AppConfig {
 	return AppConfig{
 		DatabaseConfig:   db.LoadedDatabaseConfig,
 		ShortLinksLength: ShortLinksLength,
+		Port:             Port,
+		RedirectHostUrl:  RedirectHostUrl,
 	}
 }()

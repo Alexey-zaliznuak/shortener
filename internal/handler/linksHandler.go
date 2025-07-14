@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
@@ -41,7 +42,7 @@ func createLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(link.ShortUrl))
+	res.Write([]byte(config.Config.RedirectHostUrl + link.ShortUrl))
 }
 
 func defaultHandler(res http.ResponseWriter, req *http.Request) {
