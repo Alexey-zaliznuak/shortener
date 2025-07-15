@@ -28,4 +28,4 @@ r:
 
 
 st:
-	./shortenertest-windows-amd64 -test.v -test.run=^TestIteration3 -binary-path=cmd/shortener/shortener.exe
+	./shortenertest-windows-amd64 -test.v -test.run=^TestIteration -binary-path=cmd/shortener/shortener.exe
