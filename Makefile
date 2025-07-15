@@ -11,12 +11,21 @@ build_and_run:
 
 build:
 	go build -o $(MAIN) $(MAIN)
+b:
+	$(MAKE) build
+
 
 test:
 	go test -v ./...
+t:
+	$(MAKE) test
+
 
 run:
 	./cmd/shortener/shortener.exe
+r:
+	$(MAKE) run
+
 
 st:
-	./shortenertest-windows-amd64 -test.v -test.run=^TestIteration1 -binary-path=cmd/shortener/shortener.exe
+	./shortenertest-windows-amd64 -test.v -test.run=^TestIteration3 -binary-path=cmd/shortener/shortener.exe

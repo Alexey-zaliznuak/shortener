@@ -1,82 +1,122 @@
 package handler
 
 import (
-	"io"
+	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_defaultHandler_createLink(t *testing.T) {
+func Test_links_createLink(t *testing.T) {
 	type want struct {
-		request             string
 		code                int
-		response            string
+		responseBody        string
 		notEmptyResponse    bool
 		responseContentType string
 	}
 	type test struct {
-		name string
-		want want
+		name        string
+		requestUrl  string
+		requestBody string
+		method      string
+		want        want
 	}
 
 	createLinkTests := []test{
 		{
-			name: "Create valid link",
+			name:        "Create valid link",
+			requestUrl:  "/",
+			requestBody: "https://example.com",
+			method:      resty.MethodPost,
 			want: want{
-				request:             "https://google.com",
 				code:                201,
 				responseContentType: "text/plain",
-				notEmptyResponse: true,
+				notEmptyResponse:    true,
 			},
 		},
 		{
-			name: "Create link with exists short url",
+			name:        "Create link with exists short url",
+			requestUrl:  "/",
+			requestBody: "https://example.com",
+			method:      resty.MethodPost,
 			want: want{
-				request:             "https://google.com",
 				code:                201,
 				responseContentType: "text/plain",
-				notEmptyResponse: true,
+				notEmptyResponse:    true,
 			},
 		},
 		{
-			name: "Create link with invalid url",
+			name:        "Create link with invalid url",
+			method:      resty.MethodPost,
+			requestUrl:  "/",
+			requestBody: "not valid link",
 			want: want{
-				request:             "1234",
 				code:                400,
-				response:            "create link error: invalid url: '1234'\n", // \n made by http.Error
+				responseBody:        "create link error: invalid url: 'not valid link'", // \n made by http.Error
 				responseContentType: "text/plain",
 			},
 		},
 	}
+
+	client := resty.New()
+	server := httptest.NewServer(Router)
+	defer server.Close()
 
 	for _, test := range createLinkTests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest("POST", "/", strings.NewReader(test.want.request))
+			var response *resty.Response
+			var err error
 
-			w := httptest.NewRecorder()
-			defaultHandler(w, request)
-
-			response := w.Result()
-
-			defer response.Body.Close()
-			body, err := io.ReadAll(response.Body)
+			if test.method == resty.MethodGet {
+				response, err = client.R().Get(server.URL + test.requestUrl)
+			}
+			if test.method == resty.MethodPost {
+				response, err = client.R().SetBody(test.requestBody).Post(server.URL + test.requestUrl)
+			}
 			require.NoError(t, err)
 
-			t.Logf("body: '%s'", string(body))
+			t.Logf("body: '%s'", string(response.Body()))
 
-			if test.want.response != "" {
-				assert.Equal(t, test.want.response, string(body))
-				assert.Contains(t, response.Header.Get("Content-Type"), test.want.responseContentType)
+			assert.Equal(t, test.want.code, response.StatusCode())
+
+			if test.want.responseBody != "" {
+				assert.Equal(t, test.want.responseBody, string(response.Body()))
+				assert.Contains(t, response.Header().Get("Content-Type"), test.want.responseContentType)
 			}
 
 			if test.want.notEmptyResponse {
-				assert.NotEmpty(t, string(body))
+				assert.NotEmpty(t, string(response.Body()))
 			}
-			assert.Equal(t, test.want.code, response.StatusCode)
 		})
 	}
+}
+
+func Test_links_CreateAndGet(t *testing.T) {
+	client := resty.New().SetRedirectPolicy(resty.RedirectPolicyFunc(
+		func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	))
+
+	server := httptest.NewServer(Router)
+	defer server.Close()
+
+	t.Run("Get created link", func(t *testing.T) {
+		fullUrl := "https://example.com/"
+
+		response, err := client.R().SetBody(fullUrl).Post(server.URL)
+
+		require.NoError(t, err)
+
+		shortUrl := string(response.Body())
+
+		response, err = client.R().Get(shortUrl)
+
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusTemporaryRedirect, response.StatusCode())
+		assert.Equal(t, fullUrl, response.Header().Get("Location"))
+	})
 }

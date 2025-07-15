@@ -1,36 +1,33 @@
 package handler
 
 import (
-	"io"
 	"net/http"
 
-	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
+	"github.com/gin-gonic/gin"
 )
-
-var Mux = http.NewServeMux()
 
 var linksService = service.NewLinksService(database.Client)
 
-func redirect(res http.ResponseWriter, req *http.Request) {
-	shortUrl := req.URL.Path[1:]
+func redirect(c *gin.Context) {
+	shortUrl := c.Param("shortUrl")
 	fullUrl, err := linksService.GetFullUrlFromShort(shortUrl)
 
 	if err != nil || fullUrl == "" {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	http.Redirect(res, req, fullUrl, http.StatusTemporaryRedirect)
+	c.Redirect(http.StatusTemporaryRedirect, fullUrl)
 }
 
-func createLink(res http.ResponseWriter, req *http.Request) {
-	body, err := io.ReadAll(req.Body)
+func createLink(c *gin.Context) {
+	body, err := c.GetRawData()
 
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -38,23 +35,14 @@ func createLink(res http.ResponseWriter, req *http.Request) {
 	err = linksService.CreateLink(link)
 
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
-	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(config.Config.RedirectHostUrl + link.ShortUrl))
-}
 
-func defaultHandler(res http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodPost {
-		createLink(res, req)
-	}
-
-	if req.Method == http.MethodGet {
-		redirect(res, req)
-	}
+	c.String(http.StatusCreated, "http://%s/%s", c.Request.Host, link.ShortUrl)
 }
 
 func init() {
-	Mux.HandleFunc("/", defaultHandler)
+	Router.POST("/", createLink)
+	Router.GET("/:shortUrl", redirect)
 }
