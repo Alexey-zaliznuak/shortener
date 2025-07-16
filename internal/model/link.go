@@ -11,7 +11,7 @@ import (
 type Link struct {
 	// TODO: если получится освободиться от авто тестов, можно использовать постгрес фичи
 	// ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ID uuid.UUID `gorm:"type:uuid;primaryKey"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
