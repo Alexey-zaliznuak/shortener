@@ -19,7 +19,7 @@ func Test_links_createLink(t *testing.T) {
 	}
 	type test struct {
 		name        string
-		requestUrl  string
+		requestURL  string
 		requestBody string
 		method      string
 		want        want
@@ -28,7 +28,7 @@ func Test_links_createLink(t *testing.T) {
 	createLinkTests := []test{
 		{
 			name:        "Create valid link",
-			requestUrl:  "/",
+			requestURL:  "/",
 			requestBody: "https://example.com",
 			method:      resty.MethodPost,
 			want: want{
@@ -38,8 +38,8 @@ func Test_links_createLink(t *testing.T) {
 			},
 		},
 		{
-			name:        "Create link with exists short url",
-			requestUrl:  "/",
+			name:        "Create link with exists short URL",
+			requestURL:  "/",
 			requestBody: "https://example.com",
 			method:      resty.MethodPost,
 			want: want{
@@ -49,13 +49,13 @@ func Test_links_createLink(t *testing.T) {
 			},
 		},
 		{
-			name:        "Create link with invalid url",
+			name:        "Create link with invalid URL",
 			method:      resty.MethodPost,
-			requestUrl:  "/",
+			requestURL:  "/",
 			requestBody: "not valid link",
 			want: want{
 				code:                400,
-				responseBody:        "create link error: invalid url: 'not valid link'", // \n made by http.Error
+				responseBody:        "create link error: invalid URL: 'not valid link'", // \n made by http.Error
 				responseContentType: "text/plain",
 			},
 		},
@@ -71,10 +71,10 @@ func Test_links_createLink(t *testing.T) {
 			var err error
 
 			if test.method == resty.MethodGet {
-				response, err = client.R().Get(server.URL + test.requestUrl)
+				response, err = client.R().Get(server.URL + test.requestURL)
 			}
 			if test.method == resty.MethodPost {
-				response, err = client.R().SetBody(test.requestBody).Post(server.URL + test.requestUrl)
+				response, err = client.R().SetBody(test.requestBody).Post(server.URL + test.requestURL)
 			}
 			require.NoError(t, err)
 
@@ -105,18 +105,18 @@ func Test_links_CreateAndGet(t *testing.T) {
 	defer server.Close()
 
 	t.Run("Get created link", func(t *testing.T) {
-		fullUrl := "https://example.com/"
+		fullURL := "https://example.com/"
 
-		response, err := client.R().SetBody(fullUrl).Post(server.URL)
+		response, err := client.R().SetBody(fullURL).Post(server.URL)
 
 		require.NoError(t, err)
 
-		shortUrl := string(response.Body())
+		shortURL := string(response.Body())
 
-		response, err = client.R().Get(shortUrl)
+		response, err = client.R().Get(shortURL)
 
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusTemporaryRedirect, response.StatusCode())
-		assert.Equal(t, fullUrl, response.Header().Get("Location"))
+		assert.Equal(t, fullURL, response.Header().Get("Location"))
 	})
 }

@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 	"math/rand"
-	"net/url"
+	"net/URL"
 	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
@@ -16,28 +16,28 @@ type LinksService struct {
 	repository repository.LinkRepository
 }
 
-func (s *LinksService) GetFullUrlFromShort(shortUrl string) (string, error) {
-	link, err := s.repository.GetByShortUrl(shortUrl)
+func (s *LinksService) GetFullURLFromShort(shortURL string) (string, error) {
+	link, err := s.repository.GetByShortURL(shortURL)
 	if link == nil {
 		return "", fmt.Errorf("specified link not found")
 	}
-	return link.FullUrl, err
+	return link.FullURL, err
 }
 
 func (s *LinksService) CreateLink(link *model.Link) error {
-	if !s.isValidURL(link.FullUrl) {
-		return fmt.Errorf("create link error: invalid url: '%s'", link.FullUrl)
+	if !s.isValidURL(link.FullURL) {
+		return fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
-	if link.ShortUrl == "" {
-		link.ShortUrl = s.generateShortLink(config.Config.ShortLinksLength)
+	if link.ShortURL == "" {
+		link.ShortURL = s.generateShortLink(config.Config.ShortLinksLength)
 	}
 
 	flag := true
 	for flag {
-		_, err := s.repository.GetByShortUrl(link.ShortUrl)
+		_, err := s.repository.GetByShortURL(link.ShortURL)
 		if err == nil {
-			link.ShortUrl = s.generateShortLink(config.Config.ShortLinksLength)
+			link.ShortURL = s.generateShortLink(config.Config.ShortLinksLength)
 			continue
 		}
 		flag = false
@@ -60,7 +60,7 @@ func (s *LinksService) generateShortLink(length int) string {
 }
 
 func (s *LinksService) isValidURL(u string) bool {
-	parsedURL, err := url.ParseRequestURI(u)
+	parsedURL, err := URL.ParseRequestURI(u)
 	if err != nil {
 		return false
 	}

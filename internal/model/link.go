@@ -16,8 +16,8 @@ type Link struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 
-	FullUrl  string `gorm:"index;not null"`
-	ShortUrl string `gorm:"uniqueIndex;not null;size:8"`
+	FullURL  string `gorm:"index;not null"`
+	ShortURL string `gorm:"uniqueIndex;not null;size:8"`
 }
 
 func (s *Link) BeforeCreate(tx *gorm.DB) (err error) {

@@ -12,15 +12,15 @@ import (
 var linksService = service.NewLinksService(database.Client)
 
 func redirect(c *gin.Context) {
-	shortUrl := c.Param("shortUrl")
-	fullUrl, err := linksService.GetFullUrlFromShort(shortUrl)
+	shortURL := c.Param("shortURL")
+	fullURL, err := linksService.GetFullURLFromShort(shortURL)
 
-	if err != nil || fullUrl == "" {
+	if err != nil || fullURL == "" {
 		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	c.Redirect(http.StatusTemporaryRedirect, fullUrl)
+	c.Redirect(http.StatusTemporaryRedirect, fullURL)
 }
 
 func createLink(c *gin.Context) {
@@ -31,7 +31,7 @@ func createLink(c *gin.Context) {
 		return
 	}
 
-	link := &model.Link{FullUrl: string(body)}
+	link := &model.Link{FullURL: string(body)}
 	err = linksService.CreateLink(link)
 
 	if err != nil {
@@ -39,10 +39,10 @@ func createLink(c *gin.Context) {
 		return
 	}
 
-	c.String(http.StatusCreated, "http://%s/%s", c.Request.Host, link.ShortUrl)
+	c.String(http.StatusCreated, "http://%s/%s", c.Request.Host, link.ShortURL)
 }
 
 func init() {
 	Router.POST("/", createLink)
-	Router.GET("/:shortUrl", redirect)
+	Router.GET("/:shortURL", redirect)
 }

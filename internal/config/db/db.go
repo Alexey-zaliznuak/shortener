@@ -6,16 +6,16 @@ import (
 )
 
 type DatabaseConfig struct {
-	Uri      string
+	URI      string
 	InMemory bool
 }
 
 var LoadedDatabaseConfig = func() DatabaseConfig {
-	var Uri = os.Getenv("DATABASE_URI")
-	if Uri == "" {
+	var URI = os.Getenv("DATABASE_URI")
+	if URI == "" {
 		fmt.Println("configuration warning: db: 'DATABASE_URI' not provided in env, use in memory sqlite db")
-		return DatabaseConfig{Uri: "file::memory:?cache=shared", InMemory: true}
+		return DatabaseConfig{URI: "file::memory:?cache=shared", InMemory: true}
 		// panic("configuration error: db: 'DATABASE_URI' not provided in env")
 	}
-	return DatabaseConfig{Uri: Uri, InMemory: false}
+	return DatabaseConfig{URI: URI, InMemory: false}
 }()
