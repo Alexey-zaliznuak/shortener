@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 	"math/rand"
-	"net/URL"
+	"net/url"
 	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
@@ -60,7 +60,7 @@ func (s *LinksService) generateShortLink(length int) string {
 }
 
 func (s *LinksService) isValidURL(u string) bool {
-	parsedURL, err := URL.ParseRequestURI(u)
+	parsedURL, err := url.ParseRequestURI(u)
 	if err != nil {
 		return false
 	}
