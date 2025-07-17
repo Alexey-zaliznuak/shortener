@@ -10,17 +10,17 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var Client = func() *gorm.DB {
-	var err error
-	var db *gorm.DB
+var Client *gorm.DB = nil
 
-	if config.Config.DatabaseConfig.InMemory {
-		db, err = gorm.Open(sqlite.Open(config.Config.DatabaseConfig.URI), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+func init() {
+	var err error
+
+	if config.GetConfig().DatabaseConfig.InMemory {
+		Client, err = gorm.Open(sqlite.Open(config.GetConfig().DatabaseConfig.URI), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	} else {
-		db, err = gorm.Open(postgres.Open(config.Config.DatabaseConfig.URI), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
+		Client, err = gorm.Open(postgres.Open(config.GetConfig().DatabaseConfig.URI), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	}
 	if err != nil {
 		panic(fmt.Errorf("database error: cannot connect to the database: %v", err.Error()))
 	}
-	return db
-}()
+}

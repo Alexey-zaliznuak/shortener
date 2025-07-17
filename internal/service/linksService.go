@@ -31,14 +31,14 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 	}
 
 	if link.Shortcut == "" {
-		link.Shortcut = s.generateShortcut(config.Config.ShortLinksLength)
+		link.Shortcut = s.generateShortcut(config.GetConfig().ShortLinksLength)
 	}
 
 	flag := true
 	for flag {
 		_, err := s.repository.GetByShortcut(link.Shortcut)
 		if err == nil {
-			link.Shortcut = s.generateShortcut(config.Config.ShortLinksLength)
+			link.Shortcut = s.generateShortcut(config.GetConfig().ShortLinksLength)
 			continue
 		}
 		flag = false
@@ -48,7 +48,7 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 }
 
 func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	base := config.Config.ShortLinksURLPrefix
+	base := config.GetConfig().ShortLinksURLPrefix
 	if base == "" {
 		base = fmt.Sprintf("http://%s/", c.Request.Host)
 	}
