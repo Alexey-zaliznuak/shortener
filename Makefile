@@ -7,7 +7,7 @@ MAIN=./cmd/shortener
 
 build_and_run:
 	go build -o $(MAIN) $(MAIN)
-	./cmd/shortener/shortener
+	./cmd/shortener/shortener -a=localhost:3000 -b=http://example.com/
 
 build:
 	go build -o $(MAIN) $(MAIN)

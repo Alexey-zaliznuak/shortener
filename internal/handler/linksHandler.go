@@ -4,52 +4,53 @@ import (
 	"net/http"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
-	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
-var linksService = service.NewLinksService(database.Client)
+func redirect(linksService *service.LinksService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		shortcut := c.Param("shortcut")
+		fullURL, err := linksService.GetFullURLFromShort(shortcut)
 
-func redirect(c *gin.Context) {
-	shortcut := c.Param("shortcut")
-	fullURL, err := linksService.GetFullURLFromShort(shortcut)
+		if err != nil || fullURL == "" {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
 
-	if err != nil || fullURL == "" {
-		c.String(http.StatusBadRequest, err.Error())
-		return
+		c.Redirect(http.StatusTemporaryRedirect, fullURL)
 	}
-
-	c.Redirect(http.StatusTemporaryRedirect, fullURL)
 }
 
-func createLink(c *gin.Context) {
-	body, err := c.GetRawData()
+func createLink(linksService *service.LinksService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		body, err := c.GetRawData()
 
-	if err != nil {
-		c.String(http.StatusBadRequest, err.Error())
-		return
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		link := &model.Link{FullURL: string(body)}
+		err = linksService.CreateLink(link)
+
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		url, err := linksService.BuildShortURL(link.Shortcut, c)
+
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		c.String(http.StatusCreated, url)
 	}
-
-	link := &model.Link{FullURL: string(body)}
-	err = linksService.CreateLink(link)
-
-	if err != nil {
-		c.String(http.StatusBadRequest, err.Error())
-		return
-	}
-
-	url, err := linksService.BuildShortURL(link.Shortcut, c)
-
-	if err != nil {
-		c.String(http.StatusBadRequest, err.Error())
-		return
-	}
-
-	c.String(http.StatusCreated, url)
 }
 
-func init() {
-	Router.POST("/", createLink)
-	Router.GET("/:shortcut", redirect)
+func SetupLinksRoutes(linksService *service.LinksService) {
+	Router.POST("/", createLink(linksService))
+	Router.GET("/:shortcut", redirect(linksService))
 }

@@ -3,11 +3,18 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
+	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	SetupLinksOnce sync.Once
 )
 
 func Test_links_createLink(t *testing.T) {
@@ -62,6 +69,9 @@ func Test_links_createLink(t *testing.T) {
 	}
 
 	client := resty.New()
+
+	SetupLinksOnce.Do(func() { SetupLinksRoutes(service.NewLinksService(database.GetClient())) })
+
 	server := httptest.NewServer(Router)
 	defer server.Close()
 
@@ -101,6 +111,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 		},
 	))
 
+	SetupLinksOnce.Do(func() { SetupLinksRoutes(service.NewLinksService(database.GetClient())) })
 	server := httptest.NewServer(Router)
 	defer server.Close()
 
@@ -110,6 +121,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 		response, err := client.R().SetBody(fullURL).Post(server.URL)
 
 		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, response.StatusCode())
 
 		shortcut := string(response.Body())
 

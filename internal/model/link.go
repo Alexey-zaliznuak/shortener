@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -25,8 +23,4 @@ func (s *Link) BeforeCreate(tx *gorm.DB) (err error) {
 		s.ID = uuid.New()
 	}
 	return
-}
-
-func init() {
-	database.Client.AutoMigrate(&Link{})
 }

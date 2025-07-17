@@ -29,8 +29,6 @@ var (
 
 func InitConfig() error {
 	initOnce.Do(func() {
-		flag.Parse()
-
 		serverStartupAddress := *startupAddressFlag
 		shortLinksURLPrefix := *shortLinksURLPrefixFlag
 
