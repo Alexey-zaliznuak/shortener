@@ -111,9 +111,9 @@ func Test_links_CreateAndGet(t *testing.T) {
 
 		require.NoError(t, err)
 
-		shortURL := string(response.Body())
+		shortcut := string(response.Body())
 
-		response, err = client.R().Get(shortURL)
+		response, err = client.R().Get(shortcut)
 
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusTemporaryRedirect, response.StatusCode())

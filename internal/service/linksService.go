@@ -9,6 +9,7 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -16,8 +17,8 @@ type LinksService struct {
 	repository repository.LinkRepository
 }
 
-func (s *LinksService) GetFullURLFromShort(shortURL string) (string, error) {
-	link, err := s.repository.GetByShortURL(shortURL)
+func (s *LinksService) GetFullURLFromShort(shortcut string) (string, error) {
+	link, err := s.repository.GetByShortcut(shortcut)
 	if link == nil {
 		return "", fmt.Errorf("specified link not found")
 	}
@@ -29,15 +30,15 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 		return fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
-	if link.ShortURL == "" {
-		link.ShortURL = s.generateShortLink(config.Config.ShortLinksLength)
+	if link.Shortcut == "" {
+		link.Shortcut = s.generateShortcut(config.Config.ShortLinksLength)
 	}
 
 	flag := true
 	for flag {
-		_, err := s.repository.GetByShortURL(link.ShortURL)
+		_, err := s.repository.GetByShortcut(link.Shortcut)
 		if err == nil {
-			link.ShortURL = s.generateShortLink(config.Config.ShortLinksLength)
+			link.Shortcut = s.generateShortcut(config.Config.ShortLinksLength)
 			continue
 		}
 		flag = false
@@ -46,7 +47,16 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 	return s.repository.Create(link)
 }
 
-func (s *LinksService) generateShortLink(length int) string {
+func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
+	base := config.Config.ShortLinksURLPrefix
+	if base == "" {
+		base = fmt.Sprintf("http://%s/", c.Request.Host)
+	}
+
+	return url.JoinPath(base, shortcut)
+}
+
+func (s *LinksService) generateShortcut(length int) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 	rand.NewSource(time.Now().UnixNano())

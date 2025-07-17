@@ -13,9 +13,9 @@ func (r *LinkRepository) Create(link *model.Link) error {
 	return r.Client.Create(link).Error
 }
 
-func (r *LinkRepository) GetByShortURL(shortURL string) (*model.Link, error) {
+func (r *LinkRepository) GetByShortcut(shortcut string) (*model.Link, error) {
 	link := &model.Link{}
-	err := r.Client.Where("short_URL = ?", shortURL).First(link).Error
+	err := r.Client.Where("shortcut = ?", shortcut).First(link).Error
 
 	if err != nil {
 		return nil, err

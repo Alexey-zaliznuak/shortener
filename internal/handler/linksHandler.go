@@ -12,8 +12,8 @@ import (
 var linksService = service.NewLinksService(database.Client)
 
 func redirect(c *gin.Context) {
-	shortURL := c.Param("shortURL")
-	fullURL, err := linksService.GetFullURLFromShort(shortURL)
+	shortcut := c.Param("shortcut")
+	fullURL, err := linksService.GetFullURLFromShort(shortcut)
 
 	if err != nil || fullURL == "" {
 		c.String(http.StatusBadRequest, err.Error())
@@ -39,10 +39,17 @@ func createLink(c *gin.Context) {
 		return
 	}
 
-	c.String(http.StatusCreated, "http://%s/%s", c.Request.Host, link.ShortURL)
+	url, err := linksService.BuildShortURL(link.Shortcut, c)
+
+	if err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.String(http.StatusCreated, url)
 }
 
 func init() {
 	Router.POST("/", createLink)
-	Router.GET("/:shortURL", redirect)
+	Router.GET("/:shortcut", redirect)
 }
