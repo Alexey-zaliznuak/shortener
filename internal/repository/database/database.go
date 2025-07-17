@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	client    *gorm.DB
-	initOnce  sync.Once
+	client   *gorm.DB
+	initOnce sync.Once
 )
 
 // GetClient возвращает инициализированное подключение к БД
