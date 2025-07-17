@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,33 +11,40 @@ import (
 
 type AppConfig struct {
 	db.DatabaseConfig
-	Port                 int
-	ServerStartupAddress string
+	Port           int
+	StartupAddress string
 
 	ShortLinksLength int
 
 	ShortLinksURLPrefix string
 }
 
+var (
+	StartupAddressFlag      = flag.String("a", "", "startup address")
+	ShortLinksURLPrefixFlag = flag.String("b", "", "short links url prefix")
+)
+
 var Config = func() AppConfig {
-	Port, err := strconv.Atoi(os.Getenv("PORT"))
+	flag.Parse()
 
-	if err != nil {
-		Port = 8080
-		fmt.Printf("configuration warning: 'PORT' not specified, use default: %d\n", Port)
-	}
-
-	ServerStartupAddress := os.Getenv("SERVER_STARTUP_ADDRESS")
+	ServerStartupAddress := *StartupAddressFlag
+	ShortLinksURLPrefix := *ShortLinksURLPrefixFlag
 
 	if ServerStartupAddress == "" {
-		ServerStartupAddress = fmt.Sprintf("localhost:%d", Port)
+		ServerStartupAddress = os.Getenv("SERVER_STARTUP_ADDRESS")
+	}
+
+	if ServerStartupAddress == "" {
+		ServerStartupAddress = "localhost:8080"
 		fmt.Printf("configuration warning: 'SERVER_STARTUP_ADDRESS' not specified, use based on port: %s\n", ServerStartupAddress)
 	}
 
-	ShortLinksURLPrefix := os.Getenv("SHORT_LINKS_URL_PREFIX")
+	if ShortLinksURLPrefix == "" {
+		ShortLinksURLPrefix = os.Getenv("SHORT_LINKS_URL_PREFIX")
+	}
 
 	if ShortLinksURLPrefix == "" {
-		fmt.Printf("configuration warning: 'SHORT_LINKS_URL_PREFIX' not specified")
+		fmt.Println("configuration warning: 'SHORT_LINKS_URL_PREFIX' not specified")
 	}
 
 	ShortLinksLength, err := strconv.Atoi(os.Getenv("SHORT_LINKS_LENGTH"))
@@ -51,8 +59,7 @@ var Config = func() AppConfig {
 	}
 
 	return AppConfig{
-		Port:                 Port,
-		ServerStartupAddress: ServerStartupAddress,
+		StartupAddress: ServerStartupAddress,
 
 		ShortLinksLength:    ShortLinksLength,
 		ShortLinksURLPrefix: ShortLinksURLPrefix,

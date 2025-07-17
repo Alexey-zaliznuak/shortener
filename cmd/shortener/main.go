@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	handler.Router.Run(config.Config.ServerStartupAddress)
+	handler.Router.Run(config.Config.StartupAddress)
 }
