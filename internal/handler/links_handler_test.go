@@ -76,12 +76,13 @@ func Test_links_createLink(t *testing.T) {
 			var response *resty.Response
 			var err error
 
-			if test.method == resty.MethodGet {
+			switch test.method {
+			case resty.MethodGet:
 				response, err = client.R().Get(server.URL + test.requestURL)
-			}
-			if test.method == resty.MethodPost {
+			case resty.MethodPost:
 				response, err = client.R().SetBody(test.requestBody).Post(server.URL + test.requestURL)
 			}
+
 			require.NoError(t, err)
 
 			t.Logf("body: '%s'", string(response.Body()))

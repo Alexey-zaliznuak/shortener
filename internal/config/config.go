@@ -2,7 +2,7 @@ package config
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"strconv"
 )
@@ -26,6 +26,8 @@ func CreateFLagsInitialConfig() *FlagsInitialConfig {
 	}
 }
 
+var Logger = log.Default()
+
 var GetConfig = func(flagsConfig *FlagsInitialConfig) *AppConfig {
 	startupAddress := ""
 	shortLinksURLPrefix := ""
@@ -43,21 +45,21 @@ var GetConfig = func(flagsConfig *FlagsInitialConfig) *AppConfig {
 	}
 	if startupAddress == "" {
 		startupAddress = "localhost:8080"
-		fmt.Printf("configuration warning: 'SERVER_STARTUP_ADDRESS' not specified, using default: %s\n", startupAddress)
+		Logger.Printf("configuration warning: 'SERVER_STARTUP_ADDRESS' not specified, using default: %s\n", startupAddress)
 	}
 
 	if shortLinksURLPrefix == "" {
 		shortLinksURLPrefix = os.Getenv("SHORT_LINKS_URL_PREFIX")
 	}
 	if shortLinksURLPrefix == "" {
-		fmt.Println("configuration warning: 'SHORT_LINKS_URL_PREFIX' not specified")
+		Logger.Println("configuration warning: 'SHORT_LINKS_URL_PREFIX' not specified")
 	}
 
 	shortLinksLength, err := strconv.Atoi(os.Getenv("SHORT_LINKS_LENGTH"))
 
 	if err != nil {
 		shortLinksLength = 8
-		fmt.Printf("configuration warning: 'SHORT_LINKS_LENGTH' not specified, using default: %d\n", shortLinksLength)
+		Logger.Printf("configuration warning: 'SHORT_LINKS_LENGTH' not specified, using default: %d\n", shortLinksLength)
 	}
 
 	return &AppConfig{
