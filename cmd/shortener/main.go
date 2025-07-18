@@ -5,18 +5,19 @@ import (
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler"
-	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 )
 
 func main() {
+	flagsConfig := config.CreateFLagsInitialConfig()
 	flag.Parse()
 
-	db := database.GetClient()
+	cfg := config.GetConfig(flagsConfig)
 
-	linksService := service.NewLinksService(db)
+	linksService := &service.LinksService{AppConfig: cfg}
 
-	handler.SetupLinksRoutes(linksService)
+	router := handler.NewRouter()
+	handler.SetupLinksRoutes(router, linksService)
 
-	handler.Router.Run(config.GetConfig().StartupAddress)
+	router.Run(cfg.StartupAddress)
 }

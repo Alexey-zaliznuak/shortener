@@ -50,7 +50,7 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func SetupLinksRoutes(linksService *service.LinksService) {
-	Router.POST("/", createLink(linksService))
-	Router.GET("/:shortcut", redirect(linksService))
+func SetupLinksRoutes(router *gin.Engine, linksService *service.LinksService) {
+	router.POST("/", createLink(linksService))
+	router.GET("/:shortcut", redirect(linksService))
 }

@@ -3,18 +3,13 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 
-	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
+	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-var (
-	SetupLinksOnce sync.Once
 )
 
 func Test_links_createLink(t *testing.T) {
@@ -70,9 +65,10 @@ func Test_links_createLink(t *testing.T) {
 
 	client := resty.New()
 
-	SetupLinksOnce.Do(func() { SetupLinksRoutes(service.NewLinksService(database.GetClient())) })
+	router := NewRouter()
+	SetupLinksRoutes(router, &service.LinksService{AppConfig: config.GetConfig(&config.FlagsInitialConfig{})})
 
-	server := httptest.NewServer(Router)
+	server := httptest.NewServer(router)
 	defer server.Close()
 
 	for _, test := range createLinkTests {
@@ -111,8 +107,10 @@ func Test_links_CreateAndGet(t *testing.T) {
 		},
 	))
 
-	SetupLinksOnce.Do(func() { SetupLinksRoutes(service.NewLinksService(database.GetClient())) })
-	server := httptest.NewServer(Router)
+	router := NewRouter()
+	SetupLinksRoutes(router, &service.LinksService{AppConfig: config.GetConfig(&config.FlagsInitialConfig{})})
+
+	server := httptest.NewServer(router)
 	defer server.Close()
 
 	t.Run("Get created link", func(t *testing.T) {

@@ -10,19 +10,19 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type LinksService struct {
 	repository repository.LinkRepository
+	*config.AppConfig
 }
 
 func (s *LinksService) GetFullURLFromShort(shortcut string) (string, error) {
-	link, err := s.repository.GetByShortcut(shortcut)
-	if link == nil {
+	link, ok := s.repository.GetByShortcut(shortcut)
+	if !ok {
 		return "", fmt.Errorf("specified link not found")
 	}
-	return link.FullURL, err
+	return link.FullURL, nil
 }
 
 func (s *LinksService) CreateLink(link *model.Link) error {
@@ -31,24 +31,29 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 	}
 
 	if link.Shortcut == "" {
-		link.Shortcut = s.generateShortcut(config.GetConfig().ShortLinksLength)
+		link.Shortcut = s.generateShortcut(s.AppConfig.ShortLinksLength)
 	}
 
-	flag := true
-	for flag {
-		_, err := s.repository.GetByShortcut(link.Shortcut)
-		if err == nil {
-			link.Shortcut = s.generateShortcut(config.GetConfig().ShortLinksLength)
+	const maxAttempts = 5
+	for range maxAttempts {
+		_, exists := s.repository.GetByShortcut(link.Shortcut)
+		if exists {
+			link.Shortcut = s.generateShortcut(s.AppConfig.ShortLinksLength)
 			continue
 		}
-		flag = false
+		break
 	}
 
-	return s.repository.Create(link)
+	if _, exists := s.repository.GetByShortcut(link.Shortcut); exists {
+		return fmt.Errorf("create link error: could not generate unique shortcut after %d attempts", maxAttempts)
+	}
+
+	s.repository.Create(link)
+	return nil
 }
 
 func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	base := config.GetConfig().ShortLinksURLPrefix
+	base := s.AppConfig.ShortLinksURLPrefix
 	if base == "" {
 		base = fmt.Sprintf("http://%s/", c.Request.Host)
 	}
@@ -80,8 +85,4 @@ func (s *LinksService) isValidURL(u string) bool {
 	}
 
 	return true
-}
-
-func NewLinksService(client *gorm.DB) *LinksService {
-	return &LinksService{repository: *repository.NewLinkRepository(client)}
 }
