@@ -17,7 +17,7 @@ func main() {
 	linksService := &service.LinksService{AppConfig: cfg}
 
 	router := handler.NewRouter()
-	handler.SetupLinksRoutes(router, linksService)
+	handler.RegisterLinksRoutes(router, linksService)
 
 	router.Run(cfg.StartupAddress)
 }

@@ -66,7 +66,7 @@ func Test_links_createLink(t *testing.T) {
 	client := resty.New()
 
 	router := NewRouter()
-	SetupLinksRoutes(router, &service.LinksService{AppConfig: config.GetConfig(&config.FlagsInitialConfig{})})
+	RegisterLinksRoutes(router, &service.LinksService{AppConfig: config.GetConfig(&config.FlagsInitialConfig{})})
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -109,7 +109,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 	))
 
 	router := NewRouter()
-	SetupLinksRoutes(router, &service.LinksService{AppConfig: config.GetConfig(&config.FlagsInitialConfig{})})
+	RegisterLinksRoutes(router, &service.LinksService{AppConfig: config.GetConfig(&config.FlagsInitialConfig{})})
 
 	server := httptest.NewServer(router)
 	defer server.Close()
