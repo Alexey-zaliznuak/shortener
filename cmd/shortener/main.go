@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler"
@@ -12,7 +13,11 @@ func main() {
 	flagsConfig := config.CreateFLagsInitialConfig()
 	flag.Parse()
 
-	cfg := config.GetConfig(flagsConfig)
+	cfg, err := config.GetConfig(flagsConfig)
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	linksService := &service.LinksService{AppConfig: cfg}
 
