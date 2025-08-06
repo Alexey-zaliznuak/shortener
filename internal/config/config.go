@@ -15,10 +15,10 @@ type FlagsInitialConfig struct {
 }
 
 type AppConfig struct {
-	Port                int
-	StartupAddress      string
-	ShortLinksLength    int
-	ShortLinksURLPrefix string
+	Port             int
+	ServerAddress    string
+	BaseUrl          string
+	ShortLinksLength int
 }
 
 type AppConfigBuilder struct {
@@ -45,13 +45,13 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 		def = *b.flagsConfig.StartupAddress
 	}
 
-	b.config.StartupAddress = b.loadStringVariableFromEnv("SERVER_STARTUP_ADDRESS", &def)
+	b.config.ServerAddress = b.loadStringVariableFromEnv("SERVER_ADDRESS", &def)
 
 	return b
 }
 
 func (b *AppConfigBuilder) WithShortLinksURLPrefix() *AppConfigBuilder {
-	b.config.ShortLinksURLPrefix = b.loadStringVariableFromEnv("SHORT_LINKS_URL_PREFIX", b.flagsConfig.ShortLinksURLPrefix)
+	b.config.BaseUrl = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.ShortLinksURLPrefix)
 	return b
 }
 

@@ -24,5 +24,5 @@ func main() {
 	router := handler.NewRouter()
 	handler.RegisterLinksRoutes(router, linksService)
 
-	router.Run(cfg.StartupAddress)
+	router.Run(cfg.ServerAddress)
 }
