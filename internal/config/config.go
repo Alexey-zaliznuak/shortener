@@ -64,19 +64,16 @@ func (b *AppConfigBuilder) Build() (*AppConfig, error) {
 }
 
 func (b *AppConfigBuilder) loadStringVariableFromEnv(envName string, Default *string) string {
-	value := ""
+	value := os.Getenv(envName)
 
-	if Default != nil {
+	if value == "" && Default != nil {
 		value = *Default
-	}
-
-	if value == "" {
-		value = os.Getenv(envName)
 	}
 
 	if value == "" {
 		b.Errors = append(b.Errors, fmt.Errorf("configuration error: '%s' not specified", envName))
 	}
+
 	return value
 }
 
