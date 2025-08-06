@@ -17,7 +17,7 @@ type FlagsInitialConfig struct {
 type AppConfig struct {
 	Port             int
 	ServerAddress    string
-	BaseUrl          string
+	BaseURL          string
 	ShortLinksLength int
 }
 
@@ -51,7 +51,7 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 }
 
 func (b *AppConfigBuilder) WithShortLinksURLPrefix() *AppConfigBuilder {
-	b.config.BaseUrl = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.ShortLinksURLPrefix)
+	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.ShortLinksURLPrefix)
 	return b
 }
 

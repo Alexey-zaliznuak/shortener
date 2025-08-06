@@ -53,7 +53,7 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 }
 
 func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	base := s.AppConfig.BaseUrl
+	base := s.AppConfig.BaseURL
 	if base == "" {
 		base = fmt.Sprintf("http://%s/", c.Request.Host)
 	}
