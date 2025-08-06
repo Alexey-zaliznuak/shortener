@@ -15,7 +15,6 @@ type FlagsInitialConfig struct {
 }
 
 type AppConfig struct {
-	Port             int
 	ServerAddress    string
 	BaseURL          string
 	ShortLinksLength int
@@ -41,7 +40,7 @@ func NewAppConfigBuilder(flagsConfig *FlagsInitialConfig) *AppConfigBuilder {
 func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 	def := defaultStartupAddress
 
-	if b.flagsConfig.StartupAddress != nil {
+	if b.flagsConfig.StartupAddress != nil && *b.flagsConfig.StartupAddress != "" {
 		def = *b.flagsConfig.StartupAddress
 	}
 
