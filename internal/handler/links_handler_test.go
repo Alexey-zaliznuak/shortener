@@ -146,8 +146,8 @@ func Test_links_createLinkWithJsonAPI(t *testing.T) {
 			var response *resty.Response
 			var err error
 
-			requestUrl := server.URL + "/api/shorten"
-			response, err = client.R().SetBody(test.requestBody).Post(requestUrl)
+			requestURL := server.URL + "/api/shorten"
+			response, err = client.R().SetBody(test.requestBody).Post(requestURL)
 
 			require.NoError(t, err)
 
