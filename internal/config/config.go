@@ -10,7 +10,7 @@ import (
 
 type FlagsInitialConfig struct {
 	StartupAddress *string
-	BaseUrl        *string
+	BaseURL        *string
 }
 
 type AppConfig struct {
@@ -50,8 +50,8 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 	return b
 }
 
-func (b *AppConfigBuilder) WithBaseUrl() *AppConfigBuilder {
-	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.BaseUrl)
+func (b *AppConfigBuilder) WithBaseURL() *AppConfigBuilder {
+	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.BaseURL)
 	return b
 }
 
@@ -103,14 +103,14 @@ func (b *AppConfigBuilder) loadIntVariableFromEnv(envName string, Default *int) 
 func CreateFLagsInitialConfig() *FlagsInitialConfig {
 	return &FlagsInitialConfig{
 		StartupAddress: flag.String("a", "", "startup address"),
-		BaseUrl:        flag.String("b", "", "short links url prefix"),
+		BaseURL:        flag.String("b", "", "short links url prefix"),
 	}
 }
 
 var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
 	return NewAppConfigBuilder(flagsConfig).
 		WithStartupAddress().
-		WithBaseUrl().
+		WithBaseURL().
 		WithShortLinksLength().
 		WithLoggingLevel().
 		Build()
