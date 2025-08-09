@@ -28,7 +28,7 @@ func (w customResponseBodyWriter) Write(b []byte) (int, error) {
 func RequestLogging() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		requestId, err := uuid.NewRandom()
+		requesrequestID, err := uuid.NewRandom()
 
 		if err != nil {
 			logger.Log.Error(fmt.Errorf("UUID generation error: %w", err).Error())
@@ -49,7 +49,7 @@ func RequestLogging() gin.HandlerFunc {
 		logger.Log.Info("Request received",
 			zap.String("method", c.Request.Method),
 			zap.String("URL", c.Request.URL.String()),
-			zap.String("requestId", requestId.String()),
+			zap.String("requesrequestID", requesrequestID.String()),
 			zap.Any("headers", headers),
 			zap.String("body", string(reqBody)),
 		)
