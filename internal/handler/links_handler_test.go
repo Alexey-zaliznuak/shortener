@@ -88,7 +88,7 @@ func Test_links_createLink(t *testing.T) {
 	}
 }
 
-func Test_links_createLinkWithJsonAPI(t *testing.T) {
+func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	type want struct {
 		code                int
 		responseBody        string

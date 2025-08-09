@@ -58,7 +58,7 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func createLinkWithJsonAPI(linksService *service.LinksService) gin.HandlerFunc {
+func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
 
@@ -104,6 +104,6 @@ func createLinkWithJsonAPI(linksService *service.LinksService) gin.HandlerFunc {
 func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService) {
 	router.GET("/:shortcut", redirect(linksService))
 
-	router.POST("/api/shorten", createLinkWithJsonAPI(linksService))
+	router.POST("/api/shorten", createLinkWithJSONAPI(linksService))
 	router.POST("/", createLink(linksService))
 }
