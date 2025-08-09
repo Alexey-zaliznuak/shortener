@@ -90,14 +90,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		response, err := json.Marshal(&createShortURLResponse{Result: shortURL})
-
-		if err != nil {
-			c.String(http.StatusBadRequest, err.Error())
-			return
-		}
-
-		c.JSON(http.StatusCreated, response)
+		c.JSON(http.StatusCreated, &createShortURLResponse{Result: shortURL})
 	}
 }
 
