@@ -53,12 +53,7 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 }
 
 func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	base := s.AppConfig.BaseURL
-	if base == "" {
-		base = fmt.Sprintf("http://%s/", c.Request.Host)
-	}
-
-	return url.JoinPath(base, shortcut)
+	return url.JoinPath(s.AppConfig.BaseURL, shortcut)
 }
 
 func (s *LinksService) generateShortcut(length int) string {
