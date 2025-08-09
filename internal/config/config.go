@@ -29,7 +29,6 @@ type AppConfigBuilder struct {
 var (
 	defaultShortLinksLength = 8
 	defaultStartupAddress   = "localhost:8080"
-	defaultBaseUrl          = "http://localhost:8080/"
 	defaultLoggingLevel     = "info"
 )
 
@@ -52,14 +51,7 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 }
 
 func (b *AppConfigBuilder) WithBaseUrl() *AppConfigBuilder {
-	def := defaultBaseUrl
-
-	if b.flagsConfig.BaseUrl != nil && *b.flagsConfig.BaseUrl != "" {
-		def = *b.flagsConfig.BaseUrl
-	}
-
-	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", &def)
-
+	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.BaseUrl)
 	return b
 }
 

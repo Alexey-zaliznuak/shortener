@@ -66,9 +66,7 @@ func Test_links_createLink(t *testing.T) {
 	client := resty.New()
 
 	router := NewRouter()
-	cfg, err := config.GetConfig(&config.FlagsInitialConfig{})
-
-	require.NotNil(t, err)
+	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
 	RegisterLinksRoutes(router, &service.LinksService{AppConfig: cfg})
 
@@ -113,9 +111,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 	))
 
 	router := NewRouter()
-	cfg, err := config.GetConfig(&config.FlagsInitialConfig{})
-
-	require.NotNil(t, err)
+	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
 	RegisterLinksRoutes(router, &service.LinksService{AppConfig: cfg})
 
@@ -128,6 +124,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 		response, err := client.R().SetBody(fullURL).Post(server.URL)
 
 		require.NoError(t, err)
+
 		require.Equal(t, http.StatusCreated, response.StatusCode())
 
 		shortcut := string(response.Body())
@@ -135,6 +132,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 		response, err = client.R().Get(shortcut)
 
 		require.NoError(t, err)
+
 		assert.Equal(t, http.StatusTemporaryRedirect, response.StatusCode())
 		assert.Equal(t, fullURL, response.Header().Get("Location"))
 	})
