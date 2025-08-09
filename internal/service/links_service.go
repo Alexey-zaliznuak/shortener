@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
-	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
@@ -62,8 +61,6 @@ func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, e
 
 func (s *LinksService) generateShortcut(length int) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	rand.NewSource(time.Now().UnixNano())
 
 	result := make([]rune, length)
 
