@@ -1,4 +1,4 @@
-package middlewares
+package middleware
 
 import (
 	"bytes"
@@ -15,12 +15,12 @@ import (
 	"go.uber.org/zap"
 )
 
-type customResponseBodyWriter struct {
+type responseWriterWithBody struct {
 	gin.ResponseWriter
 	body *bytes.Buffer
 }
 
-func (w customResponseBodyWriter) Write(b []byte) (int, error) {
+func (w responseWriterWithBody) Write(b []byte) (int, error) {
 	w.body.Write(b)
 	return w.ResponseWriter.Write(b)
 }
@@ -28,7 +28,7 @@ func (w customResponseBodyWriter) Write(b []byte) (int, error) {
 func RequestLogging() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		requesrequestID, err := uuid.NewRandom()
+		requestID, err := uuid.NewRandom()
 
 		if err != nil {
 			logger.Log.Error(fmt.Errorf("UUID generation error: %w", err).Error())
@@ -49,12 +49,12 @@ func RequestLogging() gin.HandlerFunc {
 		logger.Log.Info("Request received",
 			zap.String("method", c.Request.Method),
 			zap.String("URL", c.Request.URL.String()),
-			zap.String("requesrequestID", requesrequestID.String()),
+			zap.String("requestID", requestID.String()),
 			zap.Any("headers", headers),
 			zap.String("body", string(reqBody)),
 		)
 
-		customWriter := &customResponseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
+		customWriter := &responseWriterWithBody{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
 		c.Writer = customWriter
 		c.Next()
 
