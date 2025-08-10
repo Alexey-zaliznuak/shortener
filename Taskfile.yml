@@ -4,8 +4,8 @@ vars:
   BINARY_NAME: "shortener"
   MAIN: "./cmd/shortener"
 
-  LOAD_SCRIPT_BINARY_NAME: "load"
-  LOAD_SCRIPT_BINARY_PATH: "./cmd/scripts/load"
+  LOAD_SCRIPT_BINARY_NAME: "high-load"
+  LOAD_SCRIPT_BINARY_PATH: "./cmd/scripts/high-load"
 
 tasks:
   default:
@@ -50,7 +50,7 @@ tasks:
     cmds:
       - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration -binary-path={{.MAIN}}.exe
 
-  load-script:
+  high-load:
     desc: "Собрать и сразу запустить"
       # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
     cmds:

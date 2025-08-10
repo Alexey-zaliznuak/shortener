@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
@@ -12,15 +13,20 @@ import (
 
 type LinkRepository struct {
 	storage map[string]*model.Link
+	mu sync.RWMutex
 	*config.AppConfig
 }
 
 func (r *LinkRepository) Create(link *model.Link) {
+	r.mu.Lock()
 	r.storage[link.Shortcut] = link
+	r.mu.Unlock()
 }
 
 func (r *LinkRepository) GetByShortcut(shortcut string) (*model.Link, bool) {
+	r.mu.RLock()
 	l, ok := r.storage[shortcut]
+	r.mu.RUnlock()
 	return l, ok
 }
 
