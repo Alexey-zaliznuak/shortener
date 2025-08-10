@@ -12,7 +12,7 @@ import (
 )
 
 type LinksService struct {
-	repository repository.LinkRepository
+	repository *repository.LinkRepository
 	*config.AppConfig
 }
 
@@ -81,4 +81,11 @@ func (s *LinksService) isValidURL(u string) bool {
 	}
 
 	return true
+}
+
+func NewLinksService(repository *repository.LinkRepository, config *config.AppConfig) *LinksService {
+	return &LinksService{
+		repository: repository,
+		AppConfig:  config,
+	}
 }

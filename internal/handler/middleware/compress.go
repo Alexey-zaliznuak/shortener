@@ -83,12 +83,19 @@ func RequestAndResponseGzipCompressing() gin.HandlerFunc {
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
 		if sendsGzip {
 			compressReader, err := newCompressReader(c.Request.Body)
+
 			if err != nil {
+				// почему то если ловлю ошибку(намеренно тестировал) получаю
+				// [GIN-debug] [WARNING] Headers were already written. Wanted to override status code 500 with 400
+				// и в логере есть тело {"level":"info"..."body":"unexpected end of JSON input"...}
+				// но если не установлю []byte("Invalid content") то прийдет пустой респонс
+				// после моего лога и лога гина еще приходит
+				// Error #01: flate: closed writer
+				// но фактически все вроде как работает
 				newWriter.WriteHeader(http.StatusInternalServerError)
 				newWriter.Write([]byte("Invalid content"))
 				return
 			}
-
 			c.Request.Body = compressReader
 			defer compressReader.Close()
 		}

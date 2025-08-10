@@ -9,15 +9,17 @@ import (
 )
 
 type FlagsInitialConfig struct {
+	StoragePath    *string
 	StartupAddress *string
 	BaseURL        *string
 }
 
 type AppConfig struct {
-	LoggingLevel     string `json:"loggingLevel"`
-	ServerAddress    string `json:"serverAddress"`
-	BaseURL          string `json:"baseURL"`
-	ShortLinksLength int    `json:"shortLinksLength"`
+	StoragePath      string
+	LoggingLevel     string
+	ServerAddress    string
+	BaseURL          string
+	ShortLinksLength int
 }
 
 type AppConfigBuilder struct {
@@ -27,6 +29,7 @@ type AppConfigBuilder struct {
 }
 
 var (
+	defaultStoragePath      = "storage.json"
 	defaultShortLinksLength = 8
 	defaultStartupAddress   = "localhost:8080"
 	defaultLoggingLevel     = "info"
@@ -46,6 +49,18 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 	}
 
 	b.config.ServerAddress = b.loadStringVariableFromEnv("SERVER_ADDRESS", &def)
+
+	return b
+}
+
+func (b *AppConfigBuilder) WithStoragePath() *AppConfigBuilder {
+	def := defaultStoragePath
+
+	if b.flagsConfig.StoragePath != nil && *b.flagsConfig.StoragePath != "" {
+		def = *b.flagsConfig.StoragePath
+	}
+
+	b.config.StoragePath = b.loadStringVariableFromEnv("FILE_STORAGE_PATH", &def)
 
 	return b
 }
@@ -109,8 +124,9 @@ func CreateFLagsInitialConfig() *FlagsInitialConfig {
 
 var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
 	return NewAppConfigBuilder(flagsConfig).
-		WithStartupAddress().
 		WithBaseURL().
+		WithStoragePath().
+		WithStartupAddress().
 		WithShortLinksLength().
 		WithLoggingLevel().
 		Build()

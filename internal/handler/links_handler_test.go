@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
@@ -61,7 +62,7 @@ func Test_links_createLink(t *testing.T) {
 	router := NewRouter()
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, &service.LinksService{AppConfig: cfg})
+	RegisterLinksRoutes(router, service.NewLinksService(repository.NewLinksRepository(cfg), cfg))
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -136,7 +137,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	router := NewRouter()
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, &service.LinksService{AppConfig: cfg})
+	RegisterLinksRoutes(router, service.NewLinksService(repository.NewLinksRepository(cfg), cfg))
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -177,7 +178,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 	router := NewRouter()
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, &service.LinksService{AppConfig: cfg})
+	RegisterLinksRoutes(router, service.NewLinksService(repository.NewLinksRepository(cfg), cfg))
 
 	server := httptest.NewServer(router)
 	defer server.Close()
