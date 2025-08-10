@@ -14,6 +14,7 @@ var acceptedContentTypesForCompressing = strings.Join(([]string{"text/html", "ap
 type responseWriterWithCompress struct {
 	gin.ResponseWriter
 	gzipWriter *gzip.Writer
+	useGzip    bool
 }
 
 func (w *responseWriterWithCompress) Write(b []byte) (int, error) {
@@ -21,9 +22,7 @@ func (w *responseWriterWithCompress) Write(b []byte) (int, error) {
 }
 
 func (w *responseWriterWithCompress) WriteHeader(statusCode int) {
-	if statusCode < 300 {
-		w.ResponseWriter.Header().Set("Content-Encoding", "gzip")
-	}
+	w.ResponseWriter.Header().Set("Content-Encoding", "gzip")
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
@@ -68,32 +67,31 @@ func (c *compressReader) Close() error {
 
 func RequestAndResponseGzipCompressing() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// проверяем, что клиент умеет получать от сервера сжатые данные в формате gzip
-		acceptEncoding := strings.Join(c.Request.Header.Values("Accept-Encoding"), "")
+		var newWriter *responseWriterWithCompress
+
+		acceptEncodings := strings.Join(c.Request.Header.Values("Accept-Encoding"), "")
 		contentType := c.Request.Header.Get("Content-Type")
-		supportsGzip := strings.Contains(acceptedContentTypesForCompressing, contentType) && strings.Contains(acceptEncoding, "gzip")
+		supportsGzip := strings.Contains(acceptedContentTypesForCompressing, contentType) && strings.Contains(acceptEncodings, "gzip")
 
 		if supportsGzip {
-			newWriter := newResponseWriterWithCompress(c.Writer)
+			newWriter = newResponseWriterWithCompress(c.Writer)
 			c.Writer = newWriter
 
-			// не забываем отправить клиенту все сжатые данные после завершения middleware
 			defer newWriter.Close()
 		}
 
-		// проверяем, что клиент отправил серверу сжатые данные в формате gzip
-		contentEncoding := strings.Join(c.Request.Header.Values("Content-Encoding"), "")
+		contentEncoding := c.Request.Header.Get("Content-Encoding")
 		sendsGzip := strings.Contains(contentEncoding, "gzip")
-
 		if sendsGzip {
-			compressedResponseBody, err := newCompressReader(c.Request.Response.Body)
+			compressReader, err := newCompressReader(c.Request.Body)
 			if err != nil {
-				c.Writer.WriteHeader(http.StatusInternalServerError)
+				newWriter.WriteHeader(http.StatusInternalServerError)
+				newWriter.Write([]byte("Invalid content"))
 				return
 			}
-			// меняем тело запроса на новое
-			c.Request.Body = compressedResponseBody
-			defer compressedResponseBody.Close()
+
+			c.Request.Body = compressReader
+			defer compressReader.Close()
 		}
 
 		c.Next()

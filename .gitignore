@@ -24,3 +24,5 @@ vendor/
 
 # Environment
 .env
+
+test*.py
