@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
-	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
@@ -53,18 +52,15 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 }
 
 func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	base := s.AppConfig.BaseURL
-	if base == "" {
-		base = fmt.Sprintf("http://%s/", c.Request.Host)
+	prefix := s.AppConfig.BaseURL
+	if prefix == "" {
+		prefix = fmt.Sprintf("http://%s/", c.Request.Host)
 	}
-
-	return url.JoinPath(base, shortcut)
+	return url.JoinPath(prefix, shortcut)
 }
 
 func (s *LinksService) generateShortcut(length int) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	rand.NewSource(time.Now().UnixNano())
 
 	result := make([]rune, length)
 

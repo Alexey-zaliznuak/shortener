@@ -4,20 +4,20 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 )
 
 type FlagsInitialConfig struct {
-	StartupAddress      *string
-	ShortLinksURLPrefix *string
+	StartupAddress *string
+	BaseURL        *string
 }
 
 type AppConfig struct {
-	ServerAddress    string
-	BaseURL          string
-	ShortLinksLength int
+	LoggingLevel     string `json:"loggingLevel"`
+	ServerAddress    string `json:"serverAddress"`
+	BaseURL          string `json:"baseURL"`
+	ShortLinksLength int    `json:"shortLinksLength"`
 }
 
 type AppConfigBuilder struct {
@@ -29,6 +29,7 @@ type AppConfigBuilder struct {
 var (
 	defaultShortLinksLength = 8
 	defaultStartupAddress   = "localhost:8080"
+	defaultLoggingLevel     = "info"
 )
 
 func NewAppConfigBuilder(flagsConfig *FlagsInitialConfig) *AppConfigBuilder {
@@ -49,8 +50,8 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 	return b
 }
 
-func (b *AppConfigBuilder) WithShortLinksURLPrefix() *AppConfigBuilder {
-	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.ShortLinksURLPrefix)
+func (b *AppConfigBuilder) WithBaseURL() *AppConfigBuilder {
+	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.BaseURL)
 	return b
 }
 
@@ -59,24 +60,26 @@ func (b *AppConfigBuilder) WithShortLinksLength() *AppConfigBuilder {
 	return b
 }
 
+func (b *AppConfigBuilder) WithLoggingLevel() *AppConfigBuilder {
+	b.config.LoggingLevel = b.loadStringVariableFromEnv("LOGGING_LEVEL", &defaultLoggingLevel)
+	return b
+}
+
 func (b *AppConfigBuilder) Build() (*AppConfig, error) {
 	return b.config, errors.Join(b.Errors...)
 }
 
 func (b *AppConfigBuilder) loadStringVariableFromEnv(envName string, Default *string) string {
-	value := ""
+	value := os.Getenv(envName)
 
-	if Default != nil {
+	if value == "" && Default != nil {
 		value = *Default
-	}
-
-	if value == "" {
-		value = os.Getenv(envName)
 	}
 
 	if value == "" {
 		b.Errors = append(b.Errors, fmt.Errorf("configuration error: '%s' not specified", envName))
 	}
+
 	return value
 }
 
@@ -97,19 +100,18 @@ func (b *AppConfigBuilder) loadIntVariableFromEnv(envName string, Default *int) 
 	return numericValue
 }
 
-var Logger = log.Default()
-
 func CreateFLagsInitialConfig() *FlagsInitialConfig {
 	return &FlagsInitialConfig{
-		StartupAddress:      flag.String("a", "", "startup address"),
-		ShortLinksURLPrefix: flag.String("b", "", "short links url prefix"),
+		StartupAddress: flag.String("a", "", "startup address"),
+		BaseURL:        flag.String("b", "", "short links url prefix"),
 	}
 }
 
 var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
 	return NewAppConfigBuilder(flagsConfig).
 		WithStartupAddress().
-		WithShortLinksURLPrefix().
+		WithBaseURL().
 		WithShortLinksLength().
+		WithLoggingLevel().
 		Build()
 }
