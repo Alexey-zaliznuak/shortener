@@ -14,7 +14,6 @@ var acceptedContentTypesForCompressing = strings.Join(([]string{"text/html", "ap
 type responseWriterWithCompress struct {
 	gin.ResponseWriter
 	gzipWriter *gzip.Writer
-	useGzip    bool
 }
 
 func (w *responseWriterWithCompress) Write(b []byte) (int, error) {
