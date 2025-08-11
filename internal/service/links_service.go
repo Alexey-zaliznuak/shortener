@@ -30,14 +30,14 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 	}
 
 	if link.Shortcut == "" {
-		link.Shortcut = s.generateShortcut(s.AppConfig.ShortLinksLength)
+		link.Shortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
 	}
 
 	const maxAttempts = 5
 	for range maxAttempts {
 		_, exists := s.repository.GetByShortcut(link.Shortcut)
 		if exists {
-			link.Shortcut = s.generateShortcut(s.AppConfig.ShortLinksLength)
+			link.Shortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
 			continue
 		}
 		break
@@ -52,7 +52,7 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 }
 
 func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	prefix := s.AppConfig.BaseURL
+	prefix := s.AppConfig.Server.BaseURL
 	if prefix == "" {
 		prefix = fmt.Sprintf("http://%s/", c.Request.Host)
 	}

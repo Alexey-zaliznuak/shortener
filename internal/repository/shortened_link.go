@@ -33,7 +33,7 @@ func (r *LinkRepository) GetByShortcut(shortcut string) (*model.Link, bool) {
 func (r *LinkRepository) LoadStoredData() error {
 	var storedData []*model.Link
 
-	file, err := os.OpenFile(r.AppConfig.StoragePath, os.O_RDONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(r.AppConfig.DB.StoragePath, os.O_RDONLY|os.O_CREATE, 0644)
 
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (r *LinkRepository) LoadStoredData() error {
 func (r *LinkRepository) SaveInStorage() error {
 	var storedData []*model.Link
 
-	file, err := os.OpenFile(r.AppConfig.StoragePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(r.AppConfig.DB.StoragePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 
 	if err != nil {
 		return err

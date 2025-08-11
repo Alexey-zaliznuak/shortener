@@ -86,7 +86,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 		shortURL, err := linksService.BuildShortURL(link.Shortcut, c)
 
 		if err != nil {
-			c.String(http.StatusBadRequest, err.Error())
+			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
 

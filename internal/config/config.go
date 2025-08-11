@@ -15,11 +15,17 @@ type FlagsInitialConfig struct {
 }
 
 type AppConfig struct {
-	StoragePath      string
-	LoggingLevel     string
-	ServerAddress    string
-	BaseURL          string
-	ShortLinksLength int
+	LoggingLevel string
+
+	DB struct {
+		StoragePath string
+	}
+
+	Server struct {
+		BaseURL          string
+		Address          string
+		ShortLinksLength int
+	}
 }
 
 type AppConfigBuilder struct {
@@ -48,7 +54,7 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 		def = *b.flagsConfig.StartupAddress
 	}
 
-	b.config.ServerAddress = b.loadStringVariableFromEnv("SERVER_ADDRESS", &def)
+	b.config.Server.Address = b.loadStringVariableFromEnv("SERVER_ADDRESS", &def)
 
 	return b
 }
@@ -60,18 +66,18 @@ func (b *AppConfigBuilder) WithStoragePath() *AppConfigBuilder {
 		def = *b.flagsConfig.StoragePath
 	}
 
-	b.config.StoragePath = b.loadStringVariableFromEnv("FILE_STORAGE_PATH", &def)
+	b.config.DB.StoragePath = b.loadStringVariableFromEnv("FILE_STORAGE_PATH", &def)
 
 	return b
 }
 
 func (b *AppConfigBuilder) WithBaseURL() *AppConfigBuilder {
-	b.config.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.BaseURL)
+	b.config.Server.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.BaseURL)
 	return b
 }
 
 func (b *AppConfigBuilder) WithShortLinksLength() *AppConfigBuilder {
-	b.config.ShortLinksLength = b.loadIntVariableFromEnv("SHORT_LINKS_LENGTH", &defaultShortLinksLength)
+	b.config.Server.ShortLinksLength = b.loadIntVariableFromEnv("SHORT_LINKS_LENGTH", &defaultShortLinksLength)
 	return b
 }
 

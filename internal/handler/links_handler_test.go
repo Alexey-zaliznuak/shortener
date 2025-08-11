@@ -32,7 +32,7 @@ func Test_links_createLink(t *testing.T) {
 			name:        "Create valid link",
 			requestBody: "https://example.com",
 			want: want{
-				code:                201,
+				code:                http.StatusCreated,
 				responseContentType: "text/plain",
 				notEmptyResponse:    true,
 			},
@@ -41,7 +41,7 @@ func Test_links_createLink(t *testing.T) {
 			name:        "Create link with exists short URL",
 			requestBody: "https://example.com",
 			want: want{
-				code:                201,
+				code:                http.StatusCreated,
 				responseContentType: "text/plain",
 				notEmptyResponse:    true,
 			},
@@ -50,7 +50,7 @@ func Test_links_createLink(t *testing.T) {
 			name:        "Create link with invalid URL",
 			requestBody: "not valid link",
 			want: want{
-				code:                400,
+				code:                http.StatusBadRequest,
 				responseBody:        "create link error: invalid URL: 'not valid link'",
 				responseContentType: "text/plain",
 			},
@@ -107,7 +107,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 			name:        "Create valid link",
 			requestBody: `{"url": "https://example.com"}`,
 			want: want{
-				code:                201,
+				code:                http.StatusCreated,
 				responseContentType: "text/plain",
 				notEmptyResponse:    true,
 			},
@@ -116,7 +116,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 			name:        "Create link with exists short URL",
 			requestBody: `{"url": "https://example.com"}`,
 			want: want{
-				code:                201,
+				code:                http.StatusCreated,
 				responseContentType: "text/plain",
 				notEmptyResponse:    true,
 			},
@@ -125,7 +125,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 			name:        "Create link with invalid URL",
 			requestBody: `{"url": "not valid link"}`,
 			want: want{
-				code:                400,
+				code:                http.StatusBadRequest,
 				responseBody:        "create link error: invalid URL: 'not valid link'",
 				responseContentType: "text/plain",
 			},
