@@ -1,8 +1,6 @@
 package model
 
-var LinksStorage = make(map[string]*Link)
-
 type Link struct {
-	FullURL  string
-	Shortcut string
+	FullURL  string `json:"url"`
+	Shortcut string `json:"shortcut"`
 }

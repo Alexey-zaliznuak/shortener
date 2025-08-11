@@ -4,6 +4,9 @@ vars:
   BINARY_NAME: "shortener"
   MAIN: "./cmd/shortener"
 
+  LOAD_SCRIPT_BINARY_NAME: "high-load"
+  LOAD_SCRIPT_BINARY_PATH: "./cmd/scripts/high-load"
+
 tasks:
   default:
     desc: "Собрать и сразу запустить с параметрами"
@@ -46,3 +49,10 @@ tasks:
     desc: "Запустить конкретный тест через shortenertest-windows-amd64"
     cmds:
       - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration -binary-path={{.MAIN}}.exe
+
+  high-load:
+    desc: "Собрать и сразу запустить"
+      # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
+    cmds:
+      - go build -o {{.LOAD_SCRIPT_BINARY_PATH}} {{.LOAD_SCRIPT_BINARY_PATH}}
+      - '{{ .LOAD_SCRIPT_BINARY_PATH }}/{{ .LOAD_SCRIPT_BINARY_NAME }}'

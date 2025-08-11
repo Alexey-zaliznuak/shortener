@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
-	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
@@ -13,7 +12,7 @@ import (
 )
 
 type LinksService struct {
-	repository repository.LinkRepository
+	repository *repository.LinkRepository
 	*config.AppConfig
 }
 
@@ -31,14 +30,14 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 	}
 
 	if link.Shortcut == "" {
-		link.Shortcut = s.generateShortcut(s.AppConfig.ShortLinksLength)
+		link.Shortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
 	}
 
 	const maxAttempts = 5
 	for range maxAttempts {
 		_, exists := s.repository.GetByShortcut(link.Shortcut)
 		if exists {
-			link.Shortcut = s.generateShortcut(s.AppConfig.ShortLinksLength)
+			link.Shortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
 			continue
 		}
 		break
@@ -53,18 +52,15 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 }
 
 func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	base := s.AppConfig.BaseURL
-	if base == "" {
-		base = fmt.Sprintf("http://%s/", c.Request.Host)
+	prefix := s.AppConfig.Server.BaseURL
+	if prefix == "" {
+		prefix = fmt.Sprintf("http://%s/", c.Request.Host)
 	}
-
-	return url.JoinPath(base, shortcut)
+	return url.JoinPath(prefix, shortcut)
 }
 
 func (s *LinksService) generateShortcut(length int) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-	rand.NewSource(time.Now().UnixNano())
 
 	result := make([]rune, length)
 
@@ -85,4 +81,11 @@ func (s *LinksService) isValidURL(u string) bool {
 	}
 
 	return true
+}
+
+func NewLinksService(repository *repository.LinkRepository, config *config.AppConfig) *LinksService {
+	return &LinksService{
+		repository: repository,
+		AppConfig:  config,
+	}
 }
