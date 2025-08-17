@@ -7,12 +7,12 @@ import (
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
-	"github.com/Alexey-zaliznuak/shortener/internal/repository"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/gin-gonic/gin"
 )
 
 type LinksService struct {
-	repository *repository.LinkRepository
+	repository link.LinkRepository
 	*config.AppConfig
 }
 
@@ -83,7 +83,7 @@ func (s *LinksService) isValidURL(u string) bool {
 	return true
 }
 
-func NewLinksService(repository *repository.LinkRepository, config *config.AppConfig) *LinksService {
+func NewLinksService(repository link.LinkRepository, config *config.AppConfig) *LinksService {
 	return &LinksService{
 		repository: repository,
 		AppConfig:  config,

@@ -1,4 +1,4 @@
-package repository
+package link
 
 import (
 	"encoding/json"
@@ -11,29 +11,29 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 )
 
-type LinkRepository struct {
+type InMemoryLinkRepository struct {
 	storage map[string]*model.Link
-	mu sync.RWMutex
-	*config.AppConfig
+	mu      sync.RWMutex
+	config  *config.AppConfig
 }
 
-func (r *LinkRepository) Create(link *model.Link) {
+func (r *InMemoryLinkRepository) Create(link *model.Link) {
 	r.mu.Lock()
 	r.storage[link.Shortcut] = link
 	r.mu.Unlock()
 }
 
-func (r *LinkRepository) GetByShortcut(shortcut string) (*model.Link, bool) {
+func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, bool) {
 	r.mu.RLock()
 	l, ok := r.storage[shortcut]
 	r.mu.RUnlock()
 	return l, ok
 }
 
-func (r *LinkRepository) LoadStoredData() error {
+func (r *InMemoryLinkRepository) LoadStoredData() error {
 	var storedData []*model.Link
 
-	file, err := os.OpenFile(r.AppConfig.DB.StoragePath, os.O_RDONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(r.config.DB.StoragePath, os.O_RDONLY|os.O_CREATE, 0644)
 
 	if err != nil {
 		return err
@@ -56,10 +56,10 @@ func (r *LinkRepository) LoadStoredData() error {
 	return nil
 }
 
-func (r *LinkRepository) SaveInStorage() error {
+func (r *InMemoryLinkRepository) SaveInStorage() error {
 	var storedData []*model.Link
 
-	file, err := os.OpenFile(r.AppConfig.DB.StoragePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(r.config.DB.StoragePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 
 	if err != nil {
 		return err
@@ -82,6 +82,6 @@ func (r *LinkRepository) SaveInStorage() error {
 	return nil
 }
 
-func NewLinksRepository(config *config.AppConfig) *LinkRepository {
-	return &LinkRepository{AppConfig: config, storage: make(map[string]*model.Link)}
+func NewInMemoryLinksRepository(config *config.AppConfig) *InMemoryLinkRepository {
+	return &InMemoryLinkRepository{config: config, storage: make(map[string]*model.Link)}
 }

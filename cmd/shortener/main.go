@@ -12,7 +12,7 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler"
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
-	"github.com/Alexey-zaliznuak/shortener/internal/repository"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"go.uber.org/zap"
 )
@@ -32,7 +32,7 @@ func main() {
 
 	logger.Log.Info("Configuration", zap.Any("config", cfg))
 
-	linksRepository := repository.NewLinksRepository(cfg)
+	linksRepository := link.NewLinksRepository(cfg, nil)
 	defer linksRepository.SaveInStorage()
 
 	if err := linksRepository.LoadStoredData(); err != nil {
