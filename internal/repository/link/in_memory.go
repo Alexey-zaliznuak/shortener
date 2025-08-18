@@ -2,7 +2,9 @@ package link
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
@@ -50,7 +52,11 @@ func (r *InMemoryLinkRepository) LoadStoredData() error {
 	err = json.NewDecoder(file).Decode(&storedData)
 
 	if err != nil {
-		return err
+		if errors.Is(err, io.EOF) {
+			logger.Log.Warn("Empty file storage")
+		} else {
+			return err
+		}
 	}
 
 	for _, link := range storedData {
