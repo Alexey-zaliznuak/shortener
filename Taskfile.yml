@@ -52,7 +52,6 @@ tasks:
 
   high-load:
     desc: "Собрать и сразу запустить"
-      # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
     cmds:
       - go build -o {{.LOAD_SCRIPT_BINARY_PATH}} {{.LOAD_SCRIPT_BINARY_PATH}}
       - '{{ .LOAD_SCRIPT_BINARY_PATH }}/{{ .LOAD_SCRIPT_BINARY_NAME }}'
