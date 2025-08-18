@@ -58,7 +58,8 @@ func main() {
 	linksService := service.NewLinksService(linksRepository, cfg)
 
 	router := handler.NewRouter()
-	handler.RegisterLinksRoutes(router, linksService)
+	handler.RegisterLinksRoutes(router, linksService, db)
+	handler.RegisterAppHandlerRoutes(router, db)
 
 	// Server process
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

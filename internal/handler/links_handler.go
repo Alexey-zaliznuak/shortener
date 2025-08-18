@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -94,7 +95,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService) {
+func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService))
 
 	router.POST("/api/shorten", createLinkWithJSONAPI(linksService))
