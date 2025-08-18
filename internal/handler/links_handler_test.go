@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
@@ -63,9 +65,13 @@ func Test_links_createLink(t *testing.T) {
 	router := NewRouter()
 
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
+	var db *sql.DB
+	var err error
 
-	db, err := database.NewDatabaseConnectionPool(cfg)
-	require.NoError(t, err)
+	if cfg.DB.DatabaseDSN != "" {
+		db, err = database.NewDatabaseConnectionPool(cfg)
+		require.NoError(t, err)
+	}
 
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
 	require.NoError(t, err)
@@ -144,9 +150,13 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	router := NewRouter()
 
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
+	var db *sql.DB
+	var err error
 
-	db, err := database.NewDatabaseConnectionPool(cfg)
-	require.NoError(t, err)
+	if cfg.DB.DatabaseDSN != "" {
+		db, err = database.NewDatabaseConnectionPool(cfg)
+		require.NoError(t, err)
+	}
 
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
 	require.NoError(t, err)
@@ -192,9 +202,13 @@ func Test_links_CreateAndGet(t *testing.T) {
 	router := NewRouter()
 
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
+	var db *sql.DB
+	var err error
 
-	db, err := database.NewDatabaseConnectionPool(cfg)
-	require.NoError(t, err)
+	if cfg.DB.DatabaseDSN != "" {
+		db, err = database.NewDatabaseConnectionPool(cfg)
+		require.NoError(t, err)
+	}
 
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
 	require.NoError(t, err)
@@ -213,9 +227,10 @@ func Test_links_CreateAndGet(t *testing.T) {
 
 		require.Equal(t, http.StatusCreated, response.StatusCode())
 
-		shortcut := string(response.Body())
+		res := strings.Split(string(response.Body()), "/")
 
-		response, err = client.R().Get(shortcut)
+		shortcut := res[len(res) - 1]
+		response, err = client.R().Get(server.URL + "/" + shortcut)
 
 		require.NoError(t, err)
 
