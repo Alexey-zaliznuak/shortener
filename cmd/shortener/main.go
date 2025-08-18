@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"net/http"
@@ -12,12 +13,16 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler"
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
 func main() {
+	var db *sql.DB
+
+	// Init config
 	flagsConfig := config.CreateFLagsInitialConfig()
 	flag.Parse()
 
@@ -32,11 +37,22 @@ func main() {
 
 	logger.Log.Info("Configuration", zap.Any("config", cfg))
 
-	linksRepository := link.NewLinksRepository(cfg, nil)
+	// Init dependencies
+	if cfg.DB.DatabaseDSN != "" {
+		db, err = database.NewDatabaseConnectionPool(cfg)
+		if err != nil {
+			logger.Log.Fatal(err.Error())
+		}
+	}
+
+	linksRepository, err := link.NewLinksRepository(context.Background(), cfg, db)
+	if err != nil {
+		logger.Log.Fatal(err.Error())
+	}
 	defer linksRepository.SaveInStorage()
 
 	if err := linksRepository.LoadStoredData(); err != nil {
-		logger.Log.Error(err.Error())
+		logger.Log.Fatal(err.Error())
 	}
 
 	linksService := service.NewLinksService(linksRepository, cfg)
@@ -44,6 +60,7 @@ func main() {
 	router := handler.NewRouter()
 	handler.RegisterLinksRoutes(router, linksService)
 
+	// Server process
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

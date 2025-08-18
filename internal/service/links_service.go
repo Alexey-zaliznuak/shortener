@@ -6,7 +6,9 @@ import (
 	"net/url"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
+	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/gin-gonic/gin"
 )
@@ -17,9 +19,9 @@ type LinksService struct {
 }
 
 func (s *LinksService) GetFullURLFromShort(shortcut string) (string, error) {
-	link, ok := s.repository.GetByShortcut(shortcut)
-	if !ok {
-		return "", fmt.Errorf("specified link not found")
+	link, err := s.repository.GetByShortcut(shortcut)
+	if err != nil {
+		return "", err
 	}
 	return link.FullURL, nil
 }
@@ -35,15 +37,16 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 
 	const maxAttempts = 5
 	for range maxAttempts {
-		_, exists := s.repository.GetByShortcut(link.Shortcut)
-		if exists {
+		_, err := s.repository.GetByShortcut(link.Shortcut)
+		if err != nil {
 			link.Shortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
 			continue
 		}
 		break
 	}
 
-	if _, exists := s.repository.GetByShortcut(link.Shortcut); exists {
+	if _, err := s.repository.GetByShortcut(link.Shortcut); err != database.ErrNotFound {
+		logger.Log.Error(err.Error())
 		return fmt.Errorf("create link error: could not generate unique shortcut after %d attempts", maxAttempts)
 	}
 

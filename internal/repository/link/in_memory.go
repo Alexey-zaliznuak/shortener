@@ -9,6 +9,7 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 )
 
 type InMemoryLinkRepository struct {
@@ -17,17 +18,22 @@ type InMemoryLinkRepository struct {
 	config  *config.AppConfig
 }
 
-func (r *InMemoryLinkRepository) Create(link *model.Link) {
+func (r *InMemoryLinkRepository) Create(link *model.Link) error {
 	r.mu.Lock()
 	r.storage[link.Shortcut] = link
 	r.mu.Unlock()
+	return nil
 }
 
-func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, bool) {
+func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, error) {
 	r.mu.RLock()
 	l, ok := r.storage[shortcut]
 	r.mu.RUnlock()
-	return l, ok
+
+	if ok {
+		return l, nil
+	}
+	return l, database.ErrNotFound
 }
 
 func (r *InMemoryLinkRepository) LoadStoredData() error {

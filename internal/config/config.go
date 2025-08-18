@@ -63,7 +63,7 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 
 func (b *AppConfigBuilder) WithDatabaseDSN() *AppConfigBuilder {
 	def := ""
-	b.config.DB.DatabaseDSN = b.loadStringVariableFromEnv("FILE_STORAGE_PATH", &def)
+	b.config.DB.DatabaseDSN = b.loadStringVariableFromEnv("DATABASE_DSN", &def)
 	return b
 }
 

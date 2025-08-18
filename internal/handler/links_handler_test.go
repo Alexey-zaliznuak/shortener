@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/go-resty/resty/v2"
@@ -58,11 +60,17 @@ func Test_links_createLink(t *testing.T) {
 	}
 
 	client := resty.New()
-
 	router := NewRouter()
+
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, service.NewLinksService(link.NewLinksRepository(cfg, nil), cfg))
+	db, err := database.NewDatabaseConnectionPool(cfg)
+	require.NoError(t, err)
+
+	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	require.NoError(t, err)
+
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg))
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -133,11 +141,17 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	}
 
 	client := resty.New()
-
 	router := NewRouter()
+
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, service.NewLinksService(link.NewLinksRepository(cfg, nil), cfg))
+	db, err := database.NewDatabaseConnectionPool(cfg)
+	require.NoError(t, err)
+
+	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	require.NoError(t, err)
+
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg))
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -176,9 +190,16 @@ func Test_links_CreateAndGet(t *testing.T) {
 	))
 
 	router := NewRouter()
+
 	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, service.NewLinksService(link.NewLinksRepository(cfg, nil), cfg))
+	db, err := database.NewDatabaseConnectionPool(cfg)
+	require.NoError(t, err)
+
+	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	require.NoError(t, err)
+
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg))
 
 	server := httptest.NewServer(router)
 	defer server.Close()

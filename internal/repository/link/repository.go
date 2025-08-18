@@ -1,6 +1,7 @@
 package link
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
@@ -8,16 +9,16 @@ import (
 )
 
 type LinkRepository interface {
-	Create(link *model.Link)
-	GetByShortcut(shortcut string) (*model.Link, bool)
+	Create(link *model.Link) error
+	GetByShortcut(shortcut string) (*model.Link, error)
 	LoadStoredData() error
 	SaveInStorage() error
 }
 
-func NewLinksRepository(cfg *config.AppConfig, db *sql.DB) LinkRepository {
-	if cfg.DB.DatabaseDSN == ""{
-		return NewInMemoryLinksRepository(cfg)
+func NewLinksRepository(ctx context.Context, cfg *config.AppConfig, db *sql.DB) (LinkRepository, error) {
+	if cfg.DB.DatabaseDSN == "" {
+		return NewInMemoryLinksRepository(cfg), nil
 	}
 
-	return nil
+	return NewInPostgresSQLLinksRepository(ctx, cfg, db)
 }
