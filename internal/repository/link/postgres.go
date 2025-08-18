@@ -88,6 +88,10 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 		result = append(result, l)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, err
 }
 
