@@ -113,21 +113,14 @@ func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		result, err := linksService.BulkCreateWithCorrelationID(request)
+		response, err := linksService.BulkCreateWithCorrelationID(request)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
 
-		response, err := json.Marshal(result)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		c.JSON(http.StatusCreated, string(response))
+		c.JSON(http.StatusCreated, response)
 	}
 }
 
