@@ -12,8 +12,8 @@ import (
 )
 
 type CreateBatchRequest struct {
-	Url           string `json:"original_url"`
-	CorrelationId string `json:"correlation_id"`
+	URL           string `json:"original_url"`
+	CorrelationID string `json:"correlation_id"`
 }
 
 // При тесте на 1000 000 запросах/размере батча
@@ -61,7 +61,7 @@ func createBigBatch(total int) {
 	var data []CreateBatchRequest
 
 	for i := range total {
-		data = append(data, CreateBatchRequest{Url: "https://ya.ru", CorrelationId: strconv.Itoa(i)})
+		data = append(data, CreateBatchRequest{URL: "https://ya.ru", CorrelationID: strconv.Itoa(i)})
 	}
 
 	var body bytes.Buffer

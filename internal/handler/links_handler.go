@@ -104,7 +104,7 @@ func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		request := make([]*model.CreateLinkWithCorrelationIdRequestItem, 0, 100)
+		request := make([]*model.CreateLinkWithCorrelationIDRequestItem, 0, 100)
 
 		err = json.Unmarshal(body, &request)
 
@@ -113,7 +113,7 @@ func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		result, err := linksService.BulkCreateWithCorrelationId(request)
+		result, err := linksService.BulkCreateWithCorrelationID(request)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())

@@ -5,12 +5,12 @@ type Link struct {
 	Shortcut string `json:"shortcut"`
 }
 
-type CreateLinkWithCorrelationIdRequestItem struct {
+type CreateLinkWithCorrelationIDRequestItem struct {
 	FullURL       string `json:"original_url"`
-	CorrelationId string `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 }
 
-type CreateLinkWithCorrelationIdResponseItem struct {
+type CreateLinkWithCorrelationIDResponseItem struct {
 	Shortcut      string `json:"short_url"`
-	CorrelationId string `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 }
