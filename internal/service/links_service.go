@@ -46,7 +46,7 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 	return s.repository.Create(link, nil)
 }
 
-func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWithCorrelationIDRequestItem) ([]*model.CreateLinkWithCorrelationIDResponseItem, error) {
+func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWithCorrelationIDRequestItem, c *gin.Context) ([]*model.CreateLinkWithCorrelationIDResponseItem, error) {
 	var result []*model.CreateLinkWithCorrelationIDResponseItem
 
 	transactionExecuter, err := s.repository.GetTransactionExecuter(context.Background(), nil)
@@ -77,6 +77,15 @@ func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWith
 		}
 
 		err = s.repository.Create(&model.Link{FullURL: link.FullURL, Shortcut: shortcut}, transactionExecuter)
+
+		if err != nil {
+			if supportTransaction {
+				transactionExecuter.Commit()
+			}
+			return nil, err
+		}
+
+		shortcut, err = s.BuildShortURL(shortcut, c)
 
 		if err != nil {
 			if supportTransaction {

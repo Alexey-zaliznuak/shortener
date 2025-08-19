@@ -113,7 +113,7 @@ func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		response, err := linksService.BulkCreateWithCorrelationID(request)
+		response, err := linksService.BulkCreateWithCorrelationID(request, c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
