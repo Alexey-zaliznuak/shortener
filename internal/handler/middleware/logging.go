@@ -69,7 +69,9 @@ func RequestLogging() gin.HandlerFunc {
 			zap.Duration("latency", latency),
 			zap.Any("headers", respHeaders),
 			zap.String("body", respBody),
-			zap.Int("size", c.Writer.Size()),
+
+			// если написать c.Writer.Size() будет другой результат, очень маленький(например 10 при не сжатых 180)
+			zap.Int("size", customWriter.body.Len()),
 		)
 	}
 }
