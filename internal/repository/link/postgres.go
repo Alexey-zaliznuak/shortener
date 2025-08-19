@@ -175,13 +175,6 @@ func (r *PostgreSQLLinksRepository) SaveInStorage() error {
 }
 
 func NewInPostgresSQLLinksRepository(ctx context.Context, config *config.AppConfig, db *sql.DB) (*PostgreSQLLinksRepository, error) {
-	_, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS links (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), "url" TEXT, "shortcut" TEXT)`)
-
-	if err != nil {
-		logger.Log.Error("create link table error: " + err.Error())
-		return nil, err
-	}
-
 	return &PostgreSQLLinksRepository{
 		db:     db,
 		config: config,

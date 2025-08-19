@@ -51,7 +51,7 @@ tasks:
       - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration -binary-path={{.MAIN}}.exe
 
   high-load:
-    desc: "Собрать и сразу запустить"
+    desc: "100 000 запросов на создание"
     cmds:
       - go build -o {{.LOAD_SCRIPT_BINARY_PATH}} {{.LOAD_SCRIPT_BINARY_PATH}}
       - '{{ .LOAD_SCRIPT_BINARY_PATH }}/{{ .LOAD_SCRIPT_BINARY_NAME }}'

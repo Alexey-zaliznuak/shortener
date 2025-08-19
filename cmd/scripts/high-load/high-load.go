@@ -3,19 +3,25 @@ package main
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 )
 
 func main() {
+	goroutines := 10
+	total := 100_000
+
 	client := resty.New()
 
 	g := &sync.WaitGroup{}
 
-	for range 10 {
+	start := time.Now()
+
+	for range goroutines {
 		g.Add(1)
 		go func() {
-			for range 10_000 {
+			for range total / goroutines {
 				_, err := client.R().SetBody(`{"url": "https://google.com"}`).Post("http://localhost:8080/api/shorten/")
 				if err != nil {
 					fmt.Println(err.Error())
@@ -25,4 +31,6 @@ func main() {
 			}()
 		}
 	g.Wait()
+	end := time.Now()
+	fmt.Printf("Average RPS: %d\n", total / int(end.Sub(start).Seconds()))
 }
