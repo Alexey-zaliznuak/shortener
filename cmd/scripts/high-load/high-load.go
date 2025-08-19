@@ -17,9 +17,9 @@ type CreateBatchRequest struct {
 }
 
 // При тесте на 1000 000 запросах/размере батча
-// Не понимаю почему транзакционный подход в 2 раза медленнее
-// batch create link, rows per second: postgres=598 in_memory=47816.170922
-// single create link, rows per second: postgres=1159.912464 in_memory=6999.644075
+// Судя по всему без распараллеливания в несколько потоков батч менее эффективен
+// батч - вставка в секунду: postgres=598 in_memory=47816.170922
+// одиночные запросы - вставка в секунду: postgres=1159.912464 in_memory=6999.644075
 
 func createSingleLink(total int) {
 	goroutines := 10
