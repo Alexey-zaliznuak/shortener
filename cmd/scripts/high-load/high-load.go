@@ -10,7 +10,7 @@ import (
 
 func main() {
 	goroutines := 10
-	total := 100_000
+	total := 1_000
 
 	client := resty.New()
 
@@ -28,9 +28,9 @@ func main() {
 				}
 			}
 			g.Done()
-			}()
-		}
+		}()
+	}
 	g.Wait()
 	end := time.Now()
-	fmt.Printf("Average RPS: %d\n", total / int(end.Sub(start).Seconds()))
+	fmt.Printf("Average RPS: %f\n", float64(total)/float64(end.Sub(start).Seconds()))
 }

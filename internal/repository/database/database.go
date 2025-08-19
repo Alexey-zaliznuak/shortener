@@ -8,10 +8,12 @@ import (
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
+	"github.com/Alexey-zaliznuak/shortener/migrations"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	iofs "github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -39,11 +41,12 @@ func NewDatabaseConnectionPool(cfg *config.AppConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("migrate driver: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
-		"postgres",
-		driver,
-	)
+	src, err := iofs.New(migrations.FS, ".")
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := migrate.NewWithInstance("iofs", src, "postgres", driver)
 	if err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate new: %w", err)
