@@ -1,7 +1,9 @@
 package database
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"time"
@@ -17,7 +19,21 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-var ErrNotFound = errors.New("not found")
+var (
+	ErrNotFound                       = errors.New("not found")
+	ErrExecuterNotSupportTransactions = errors.New("chosen repository does not support transactions")
+)
+
+type Executer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+type TransactionExecuter interface {
+	Executer
+	driver.Tx
+}
 
 func NewDatabaseConnectionPool(cfg *config.AppConfig) (*sql.DB, error) {
 	db, err := sql.Open("pgx", cfg.DB.DatabaseDSN)

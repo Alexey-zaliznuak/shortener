@@ -95,11 +95,18 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 	return result, err
 }
 
-func (r *PostgreSQLLinksRepository) Create(link *model.Link) error {
+func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.Executer) error {
+	var exec database.Executer = r.db
+
+	if executer != nil {
+		exec = executer
+	}
+
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := r.db.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (url, shortcut) VALUES ($1, $2)", r.table), link.FullURL, link.Shortcut)
+	// TODO: sync.once  with precompiled queries
+	_, err := exec.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (url, shortcut) VALUES ($1, $2)", r.table), link.FullURL, link.Shortcut)
 	return err
 }
 
@@ -191,6 +198,10 @@ func (r *PostgreSQLLinksRepository) SaveInStorage() error {
 	logger.Log.Info(fmt.Sprintf("Saved urls: %d", len(allLinks)))
 
 	return nil
+}
+
+func (r *PostgreSQLLinksRepository) GetTransactionExecuter(ctx context.Context, opts *sql.TxOptions) (database.TransactionExecuter, error) {
+	return r.db.BeginTx(ctx, opts)
 }
 
 func NewInPostgresSQLLinksRepository(ctx context.Context, config *config.AppConfig, db *sql.DB) (*PostgreSQLLinksRepository, error) {

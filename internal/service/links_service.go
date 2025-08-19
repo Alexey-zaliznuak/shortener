@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -32,34 +34,95 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 	}
 
 	if link.Shortcut == "" {
-		link.Shortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
+		var err error
+
+		link.Shortcut, err = s.createUniqueShortcut()
+
+		if err != nil {
+			return err
+		}
 	}
 
-	const maxAttempts = 5
-	for range maxAttempts {
-		_, err := s.repository.GetByShortcut(link.Shortcut)
+	return s.repository.Create(link, nil)
+}
+
+func (s *LinksService) BulkCreateWithCorrelationId(links []*model.CreateLinkWithCorrelationIdRequestItem) ([]*model.CreateLinkWithCorrelationIdResponseItem, error) {
+	var result []*model.CreateLinkWithCorrelationIdResponseItem
+
+	transactionExecuter, err := s.repository.GetTransactionExecuter(context.Background(), nil)
+	supportTransaction := true
+
+	if err != nil {
+		if errors.Is(err, database.ErrExecuterNotSupportTransactions) {
+			supportTransaction = false
+		} else {
+			return nil, err
+		}
+	}
+
+	for index, link := range links {
+		if !s.isValidURL(link.FullURL) {
+			if supportTransaction {
+				transactionExecuter.Commit()
+			}
+			return nil, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		}
+
+		shortcut, err := s.createUniqueShortcut()
 		if err != nil {
-			link.Shortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
+			if supportTransaction {
+				transactionExecuter.Commit()
+			}
+			return nil, err
+		}
+
+		err = s.repository.Create(&model.Link{FullURL: link.FullURL, Shortcut: shortcut}, transactionExecuter)
+
+		if err != nil {
+			if supportTransaction {
+				transactionExecuter.Commit()
+			}
+			return nil, err
+		}
+
+		result = append(result, &model.CreateLinkWithCorrelationIdResponseItem{CorrelationId: link.CorrelationId, Shortcut: shortcut})
+
+		if supportTransaction && (index+1%1000 == 0 || index == len(links)-1) {
+			transactionExecuter.Commit()
+			transactionExecuter, err = s.repository.GetTransactionExecuter(context.Background(), nil)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if supportTransaction {
+		transactionExecuter.Commit()
+	}
+
+	return result, nil
+}
+
+func (s *LinksService) createUniqueShortcut() (string, error) {
+	maxAttempts := 5
+
+	newShortcut := s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
+
+	for range maxAttempts {
+		_, err := s.repository.GetByShortcut(newShortcut)
+		if err != nil {
+			newShortcut = s.generateShortcut(s.AppConfig.Server.ShortLinksLength)
 			continue
 		}
 		break
 	}
 
-	if _, err := s.repository.GetByShortcut(link.Shortcut); err != database.ErrNotFound {
+	if _, err := s.repository.GetByShortcut(newShortcut); err != database.ErrNotFound {
 		logger.Log.Error(err.Error())
-		return fmt.Errorf("create link error: could not generate unique shortcut after %d attempts", maxAttempts)
+		return "", fmt.Errorf("create link error: could not generate unique shortcut after %d attempts", maxAttempts)
 	}
 
-	s.repository.Create(link)
-	return nil
-}
-
-func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
-	prefix := s.AppConfig.Server.BaseURL
-	if prefix == "" {
-		prefix = fmt.Sprintf("http://%s/", c.Request.Host)
-	}
-	return url.JoinPath(prefix, shortcut)
+	return newShortcut, nil
 }
 
 func (s *LinksService) generateShortcut(length int) string {
@@ -71,6 +134,14 @@ func (s *LinksService) generateShortcut(length int) string {
 		result[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(result)
+}
+
+func (s *LinksService) BuildShortURL(shortcut string, c *gin.Context) (string, error) {
+	prefix := s.AppConfig.Server.BaseURL
+	if prefix == "" {
+		prefix = fmt.Sprintf("http://%s/", c.Request.Host)
+	}
+	return url.JoinPath(prefix, shortcut)
 }
 
 func (s *LinksService) isValidURL(u string) bool {

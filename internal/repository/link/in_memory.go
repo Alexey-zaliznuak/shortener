@@ -1,6 +1,8 @@
 package link
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,13 +22,6 @@ type InMemoryLinkRepository struct {
 	config  *config.AppConfig
 }
 
-func (r *InMemoryLinkRepository) Create(link *model.Link) error {
-	r.mu.Lock()
-	r.storage[link.Shortcut] = link
-	r.mu.Unlock()
-	return nil
-}
-
 func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, error) {
 	r.mu.RLock()
 	l, ok := r.storage[shortcut]
@@ -36,6 +31,13 @@ func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, er
 		return l, nil
 	}
 	return l, database.ErrNotFound
+}
+
+func (r *InMemoryLinkRepository) Create(link *model.Link, executer database.Executer) error {
+	r.mu.Lock()
+	r.storage[link.Shortcut] = link
+	r.mu.Unlock()
+	return nil
 }
 
 func (r *InMemoryLinkRepository) LoadStoredData() error {
@@ -60,7 +62,7 @@ func (r *InMemoryLinkRepository) LoadStoredData() error {
 	}
 
 	for _, link := range storedData {
-		r.Create(link)
+		r.Create(link, nil)
 	}
 
 	logger.Log.Info(fmt.Sprintf("Restored urls: %d", len(storedData)))
@@ -92,6 +94,10 @@ func (r *InMemoryLinkRepository) SaveInStorage() error {
 	logger.Log.Info(fmt.Sprintf("Saved urls: %d", len(storedData)))
 
 	return nil
+}
+
+func (r *InMemoryLinkRepository) GetTransactionExecuter(ctx context.Context, opts *sql.TxOptions) (database.TransactionExecuter, error) {
+	return nil, database.ErrExecuterNotSupportTransactions
 }
 
 func NewInMemoryLinksRepository(config *config.AppConfig) *InMemoryLinkRepository {
