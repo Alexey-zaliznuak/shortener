@@ -48,7 +48,7 @@ tasks:
   st:
     desc: "Запустить конкретный тест через shortenertest-windows-amd64"
     cmds:
-      - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration -binary-path={{.MAIN}}.exe
+      - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration2 -binary-path={{.MAIN}}.exe
 
   high-load:
     desc: "100 000 запросов на создание"

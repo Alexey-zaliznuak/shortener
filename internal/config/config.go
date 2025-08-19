@@ -63,6 +63,11 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 
 func (b *AppConfigBuilder) WithDatabaseDSN() *AppConfigBuilder {
 	def := ""
+
+	if b.flagsConfig.DatabaseDSN != nil && *b.flagsConfig.DatabaseDSN != "" {
+		def = *b.flagsConfig.DatabaseDSN
+	}
+
 	b.config.DB.DatabaseDSN = b.loadStringVariableFromEnv("DATABASE_CONN_STRING", &def)
 	return b
 }

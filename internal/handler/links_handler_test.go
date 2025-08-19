@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -69,6 +70,8 @@ func Test_links_createLink(t *testing.T) {
 	var err error
 
 	if cfg.DB.DatabaseDSN != "" {
+		fmt.Println("DATABASE DSN")
+		fmt.Println(cfg.DB.DatabaseDSN)
 		db, err = database.NewDatabaseConnectionPool(cfg)
 		require.NoError(t, err)
 	}
