@@ -125,22 +125,41 @@ func (r *PostgreSQLLinksRepository) LoadStoredData() error {
 		}
 	}
 
+	tx, err := r.db.Begin()
+
+	if err != nil {
+		return err
+	}
+
 	for _, link := range storedData {
 		_, err := r.GetByShortcut(link.Shortcut)
 		if err != nil {
 			if errors.Is(err, database.ErrNotFound) {
-				err := r.Create(link)
+				_, err = tx.ExecContext(
+					context.Background(),
+					fmt.Sprintf("INSERT INTO %s (url, shortcut) VALUES ($1, $2)", r.table),
+					link.FullURL,
+					link.Shortcut,
+				)
+
 				if err != nil {
 					logger.Log.Error(fmt.Sprintf("Failing link creation: %s", err.Error()))
-					skipped += 1
-					continue
+					tx.Rollback()
+					return err
 				}
+
 				restored += 1
 				continue
 			}
 			logger.Log.Error(fmt.Sprintf("Failing link creation: %s", err.Error()))
 		}
 		skipped += 1
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return err
 	}
 
 	logger.Log.Info("Restored urls", zap.Int("restored", restored), zap.Int("skipped", skipped))
