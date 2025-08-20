@@ -14,6 +14,7 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
+	"github.com/Alexey-zaliznuak/shortener/internal/utils"
 )
 
 type InMemoryLinkRepository struct {
@@ -71,7 +72,7 @@ func (r *InMemoryLinkRepository) LoadStoredData() error {
 		return err
 	}
 
-	defer file.Close()
+	defer func() { utils.LogErrorWrapper(file.Close()) }()
 
 	err = json.NewDecoder(file).Decode(&storedData)
 
@@ -101,7 +102,7 @@ func (r *InMemoryLinkRepository) SaveInStorage() error {
 		return err
 	}
 
-	defer file.Close()
+	defer func() { utils.LogErrorWrapper(file.Close()) }()
 
 	for _, link := range r.storage {
 		storedData = append(storedData, link)

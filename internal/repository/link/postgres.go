@@ -14,6 +14,7 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
+	"github.com/Alexey-zaliznuak/shortener/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -75,7 +76,7 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { utils.LogErrorWrapper(rows.Close()) }()
 
 	for rows.Next() {
 		l := &model.Link{}
@@ -141,7 +142,7 @@ func (r *PostgreSQLLinksRepository) LoadStoredData() error {
 		return err
 	}
 
-	defer file.Close()
+	defer func() { utils.LogErrorWrapper(file.Close()) }()
 
 	err = json.NewDecoder(file).Decode(&storedData)
 
@@ -210,7 +211,7 @@ func (r *PostgreSQLLinksRepository) SaveInStorage() error {
 		return err
 	}
 
-	defer file.Close()
+	defer func() { utils.LogErrorWrapper(file.Close()) }()
 
 	allLinks, err := r.getAll()
 

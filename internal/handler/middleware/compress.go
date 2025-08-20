@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Alexey-zaliznuak/shortener/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -76,7 +77,7 @@ func RequestAndResponseGzipCompressing() gin.HandlerFunc {
 			newWriter = newResponseWriterWithCompress(c.Writer)
 			c.Writer = newWriter
 
-			defer newWriter.Close()
+			defer func() { utils.LogErrorWrapper(newWriter.Close()) }()
 		}
 
 		contentEncoding := c.Request.Header.Get("Content-Encoding")
@@ -98,7 +99,7 @@ func RequestAndResponseGzipCompressing() gin.HandlerFunc {
 				return
 			}
 			c.Request.Body = compressReader
-			defer compressReader.Close()
+			defer func() { utils.LogErrorWrapper(compressReader.Close()) }()
 		}
 
 		c.Next()
