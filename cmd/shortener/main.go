@@ -34,7 +34,7 @@ func main() {
 	}
 
 	logger.Initialize(cfg.LoggingLevel)
-	defer func(){ utils.LogErrorWrapper(logger.Log.Sync()) }()
+	defer logger.Log.Sync()
 
 	logger.Log.Info("Configuration", zap.Any("config", cfg))
 
