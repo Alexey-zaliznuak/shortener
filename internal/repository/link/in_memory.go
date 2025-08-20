@@ -17,7 +17,7 @@ import (
 )
 
 type InMemoryLinkRepository struct {
-	storage map[string]*model.Link
+	storage map[string]*model.Link // для удобства будем хранить и ссылки и шорткаты
 	mu      sync.RWMutex
 	config  *config.AppConfig
 }
@@ -33,11 +33,33 @@ func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, er
 	return l, database.ErrNotFound
 }
 
-func (r *InMemoryLinkRepository) Create(link *model.Link, executer database.Executer) error {
+func (r *InMemoryLinkRepository) GetByFullUrl(url string) (*model.Link, error) {
+	r.mu.RLock()
+	l, ok := r.storage[url]
+	r.mu.RUnlock()
+
+	if ok {
+		return l, nil
+	}
+	return l, database.ErrNotFound
+}
+
+func (r *InMemoryLinkRepository) Create(link *model.Link, executer database.Executer) (*model.Link, bool, error) {
+	l, err := r.GetByFullUrl(link.FullURL)
+
+	if err != database.ErrNotFound {
+		if err != nil {
+			return link, false, err
+		}
+
+		return l, false, err
+	}
+
 	r.mu.Lock()
 	r.storage[link.Shortcut] = link
+	r.storage[link.FullURL] = link
 	r.mu.Unlock()
-	return nil
+	return link, true, nil
 }
 
 func (r *InMemoryLinkRepository) LoadStoredData() error {

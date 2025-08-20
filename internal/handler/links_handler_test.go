@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +18,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func generateRandomString() string {
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	result := make([]rune, 10)
+
+	for i := range result {
+		result[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(result)
+}
+func generateRandomUrl() string {
+	return fmt.Sprintf("https://example.com/%s", generateRandomString())
+}
 
 func Test_links_createLink(t *testing.T) {
 	type want struct {
@@ -35,7 +50,7 @@ func Test_links_createLink(t *testing.T) {
 	createLinkTests := []test{
 		{
 			name:        "Create valid link",
-			requestBody: "https://example.com",
+			requestBody: generateRandomUrl(),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -44,7 +59,7 @@ func Test_links_createLink(t *testing.T) {
 		},
 		{
 			name:        "Create link with exists short URL",
-			requestBody: "https://example.com",
+			requestBody: generateRandomUrl(),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -122,7 +137,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	createLinkTests := []test{
 		{
 			name:        "Create valid link",
-			requestBody: `{"url": "https://example.com"}`,
+			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomUrl()),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -131,7 +146,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 		},
 		{
 			name:        "Create link with exists short URL",
-			requestBody: `{"url": "https://example.com"}`,
+			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomUrl()),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -222,7 +237,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 	defer server.Close()
 
 	t.Run("Get created link", func(t *testing.T) {
-		fullURL := "https://example.com/"
+		fullURL := generateRandomUrl()
 
 		response, err := client.R().SetBody(fullURL).Post(server.URL)
 

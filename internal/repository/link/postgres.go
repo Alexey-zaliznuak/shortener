@@ -96,8 +96,9 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 }
 
 // Will modify shortcut if find link with same full url
-func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.Executer) error {
+func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.Executer) (*model.Link, bool, error) {
 	var exec database.Executer = r.db
+	oldShortcut := link.Shortcut
 
 	if executer != nil {
 		exec = executer
@@ -121,12 +122,13 @@ func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.E
 	)
 
 	if err != nil {
-		return err
+		return link, false, err
 	}
 
-	res.Scan(&link.FullURL, &link.Shortcut)
+	newLink := &model.Link{}
+	res.Scan(&newLink.FullURL, &newLink.Shortcut)
 
-	return err
+	return newLink, oldShortcut == newLink.Shortcut, nil
 }
 
 func (r *PostgreSQLLinksRepository) LoadStoredData() error {

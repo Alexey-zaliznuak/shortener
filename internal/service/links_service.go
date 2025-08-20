@@ -28,9 +28,9 @@ func (s *LinksService) GetFullURLFromShort(shortcut string) (string, error) {
 	return link.FullURL, nil
 }
 
-func (s *LinksService) CreateLink(link *model.Link) error {
+func (s *LinksService) CreateLink(link *model.Link) (*model.Link, bool, error) {
 	if !s.isValidURL(link.FullURL) {
-		return fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		return link, false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
 	if link.Shortcut == "" {
@@ -39,7 +39,7 @@ func (s *LinksService) CreateLink(link *model.Link) error {
 		link.Shortcut, err = s.createUniqueShortcut()
 
 		if err != nil {
-			return err
+			return link, false, err
 		}
 	}
 
@@ -76,7 +76,9 @@ func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWith
 			return nil, err
 		}
 
-		err = s.repository.Create(&model.Link{FullURL: link.FullURL, Shortcut: shortcut}, transactionExecuter)
+		newLink := &model.Link{FullURL: link.FullURL, Shortcut: shortcut}
+
+		newLink, _, err = s.repository.Create(newLink, transactionExecuter)
 
 		if err != nil {
 			if supportTransaction {
@@ -85,7 +87,7 @@ func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWith
 			return nil, err
 		}
 
-		shortcut, err = s.BuildShortURL(shortcut, c)
+		shortcut, err = s.BuildShortURL(newLink.Shortcut, c)
 
 		if err != nil {
 			if supportTransaction {

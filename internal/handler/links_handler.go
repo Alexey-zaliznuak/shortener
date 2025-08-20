@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
@@ -41,7 +42,7 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 		}
 
 		link := &model.Link{FullURL: string(body)}
-		err = linksService.CreateLink(link)
+		link, created, err := linksService.CreateLink(link)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -55,7 +56,13 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		c.String(http.StatusCreated, url)
+		status := http.StatusCreated
+		if !created {
+			fmt.Printf("Duplicate: %s", link.FullURL)
+			status = http.StatusConflict
+		}
+
+		c.String(status, url)
 	}
 }
 
@@ -77,7 +84,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 		}
 
 		link := &model.Link{FullURL: request.FullURL}
-		err = linksService.CreateLink(link)
+		link, created, err := linksService.CreateLink(link)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -91,7 +98,12 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, &createShortURLResponse{Result: shortURL})
+		status := http.StatusCreated
+		if !created {
+			status = http.StatusConflict
+		}
+
+		c.JSON(status, &createShortURLResponse{Result: shortURL})
 	}
 }
 
