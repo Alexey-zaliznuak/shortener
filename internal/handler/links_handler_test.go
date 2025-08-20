@@ -232,7 +232,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 
 		res := strings.Split(string(response.Body()), "/")
 
-		shortcut := res[len(res) - 1]
+		shortcut := res[len(res)-1]
 		response, err = client.R().Get(server.URL + "/" + shortcut)
 
 		require.NoError(t, err)

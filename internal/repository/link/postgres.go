@@ -95,6 +95,7 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 	return result, err
 }
 
+// Will modify shortcut if find link with same full url
 func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.Executer) error {
 	var exec database.Executer = r.db
 
@@ -106,7 +107,25 @@ func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.E
 	defer cancel()
 
 	// TODO: sync.once  with precompiled queries
-	_, err := exec.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s (url, shortcut) VALUES ($1, $2)", r.table), link.FullURL, link.Shortcut)
+	res, err := r.QueryRowContextWithRetry(ctx, fmt.Sprintf(
+		`INSERT INTO %s (url, shortcut)
+			VALUES ($1, $2)
+			ON CONFLICT (url) DO UPDATE SET shortcut = links.shortcut
+			RETURNING %s.url, %s.shortcut;
+			`,
+		r.table, r.table, r.table,
+	),
+		exec,
+		link.FullURL,
+		link.Shortcut,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	res.Scan(&link.FullURL, &link.Shortcut)
+
 	return err
 }
 
@@ -142,9 +161,15 @@ func (r *PostgreSQLLinksRepository) LoadStoredData() error {
 		_, err := r.GetByShortcut(link.Shortcut)
 		if err != nil {
 			if errors.Is(err, database.ErrNotFound) {
-				_, err = tx.ExecContext(
+				res, err := r.QueryRowContextWithRetry(
 					context.Background(),
-					fmt.Sprintf("INSERT INTO %s (url, shortcut) VALUES ($1, $2)", r.table),
+					fmt.Sprintf(
+						`INSERT INTO %s (url, shortcut)
+						VALUES ($1, $2)
+						ON CONFLICT (url) DO NOTHING
+						RETURNING %s.url, %s.shortcut;
+					`, r.table, r.table, r.table),
+					tx,
 					link.FullURL,
 					link.Shortcut,
 				)
@@ -154,6 +179,8 @@ func (r *PostgreSQLLinksRepository) LoadStoredData() error {
 					tx.Rollback()
 					return err
 				}
+
+				res.Scan(&link.FullURL, &link.Shortcut)
 
 				restored += 1
 				continue
@@ -198,6 +225,31 @@ func (r *PostgreSQLLinksRepository) SaveInStorage() error {
 	logger.Log.Info(fmt.Sprintf("Saved urls: %d", len(allLinks)))
 
 	return nil
+}
+
+func (r *PostgreSQLLinksRepository) QueryRowContextWithRetry(ctx context.Context, query string, executer database.Executer, args ...any) (*sql.Row, error) {
+	const maxRetries = 3
+	var lastErr error
+
+	classifier := database.NewPostgresErrorClassifier()
+
+	for range maxRetries {
+		row := executer.QueryRowContext(ctx, query, args...)
+		err := row.Err()
+
+		if err == nil {
+			return row, nil
+		}
+
+		classification := classifier.Classify(err)
+
+		if classification == database.NonRetriable {
+			fmt.Printf("Непредвиденная ошибка: %v\n", err)
+			return nil, err
+		}
+	}
+
+	return nil, fmt.Errorf("операция прервана после %d попыток: %w", maxRetries, lastErr)
 }
 
 func (r *PostgreSQLLinksRepository) GetTransactionExecuter(ctx context.Context, opts *sql.TxOptions) (database.TransactionExecuter, error) {

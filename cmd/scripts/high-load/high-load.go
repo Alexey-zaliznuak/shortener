@@ -18,8 +18,8 @@ type CreateBatchRequest struct {
 
 // При тесте на 1000 000 запросах/размере батча
 // Судя по всему без распараллеливания в несколько потоков батч менее эффективен
-// батч - вставка в секунду: postgres=598 in_memory=47816.170922
-// одиночные запросы - вставка в секунду: postgres=1159.912464 in_memory=6999.644075
+// батч - вставка в секунду: postgres=598 in_memory=47816
+// одиночные запросы - вставка в секунду: postgres=1159 in_memory=7000
 
 func createSingleLink(total int) {
 	goroutines := 10
@@ -86,8 +86,8 @@ func createBigBatch(total int) {
 }
 
 func main() {
-	createSingleLinkRequests := 100_000
-	createBatchRows := 0
+	createSingleLinkRequests := 0
+	createBatchRows := 1000
 
 	g := &sync.WaitGroup{}
 
