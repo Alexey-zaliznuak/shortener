@@ -33,7 +33,7 @@ func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, er
 	return l, database.ErrNotFound
 }
 
-func (r *InMemoryLinkRepository) GetByFullUrl(url string) (*model.Link, error) {
+func (r *InMemoryLinkRepository) GetByFullURL(url string) (*model.Link, error) {
 	r.mu.RLock()
 	l, ok := r.storage[url]
 	r.mu.RUnlock()
@@ -45,7 +45,7 @@ func (r *InMemoryLinkRepository) GetByFullUrl(url string) (*model.Link, error) {
 }
 
 func (r *InMemoryLinkRepository) Create(link *model.Link, executer database.Executer) (*model.Link, bool, error) {
-	l, err := r.GetByFullUrl(link.FullURL)
+	l, err := r.GetByFullURL(link.FullURL)
 
 	if err != database.ErrNotFound {
 		if err != nil {

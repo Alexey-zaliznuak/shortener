@@ -29,7 +29,7 @@ func generateRandomString() string {
 	}
 	return string(result)
 }
-func generateRandomUrl() string {
+func generateRandomURL() string {
 	return fmt.Sprintf("https://example.com/%s", generateRandomString())
 }
 
@@ -50,7 +50,7 @@ func Test_links_createLink(t *testing.T) {
 	createLinkTests := []test{
 		{
 			name:        "Create valid link",
-			requestBody: generateRandomUrl(),
+			requestBody: generateRandomURL(),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -59,7 +59,7 @@ func Test_links_createLink(t *testing.T) {
 		},
 		{
 			name:        "Create link with exists short URL",
-			requestBody: generateRandomUrl(),
+			requestBody: generateRandomURL(),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -137,7 +137,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	createLinkTests := []test{
 		{
 			name:        "Create valid link",
-			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomUrl()),
+			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomURL()),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -146,7 +146,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 		},
 		{
 			name:        "Create link with exists short URL",
-			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomUrl()),
+			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomURL()),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -237,7 +237,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 	defer server.Close()
 
 	t.Run("Get created link", func(t *testing.T) {
-		fullURL := generateRandomUrl()
+		fullURL := generateRandomURL()
 
 		response, err := client.R().SetBody(fullURL).Post(server.URL)
 
