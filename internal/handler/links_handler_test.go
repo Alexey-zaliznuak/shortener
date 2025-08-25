@@ -1,17 +1,37 @@
 package handler
 
 import (
+	"context"
+	"database/sql"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
-	"github.com/Alexey-zaliznuak/shortener/internal/repository"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func generateRandomString() string {
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	result := make([]rune, 10)
+
+	for i := range result {
+		result[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(result)
+}
+func generateRandomURL() string {
+	return fmt.Sprintf("https://example.com/%s", generateRandomString())
+}
 
 func Test_links_createLink(t *testing.T) {
 	type want struct {
@@ -30,7 +50,7 @@ func Test_links_createLink(t *testing.T) {
 	createLinkTests := []test{
 		{
 			name:        "Create valid link",
-			requestBody: "https://example.com",
+			requestBody: generateRandomURL(),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -39,7 +59,7 @@ func Test_links_createLink(t *testing.T) {
 		},
 		{
 			name:        "Create link with exists short URL",
-			requestBody: "https://example.com",
+			requestBody: generateRandomURL(),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -58,11 +78,23 @@ func Test_links_createLink(t *testing.T) {
 	}
 
 	client := resty.New()
-
 	router := NewRouter()
-	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, service.NewLinksService(repository.NewLinksRepository(cfg), cfg))
+	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
+	var db *sql.DB
+	var err error
+
+	if cfg.DB.DatabaseDSN != "" {
+		fmt.Println("DATABASE DSN")
+		fmt.Println(cfg.DB.DatabaseDSN)
+		db, err = database.NewDatabaseConnectionPool(cfg)
+		require.NoError(t, err)
+	}
+
+	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	require.NoError(t, err)
+
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -105,7 +137,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	createLinkTests := []test{
 		{
 			name:        "Create valid link",
-			requestBody: `{"url": "https://example.com"}`,
+			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomURL()),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -114,7 +146,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 		},
 		{
 			name:        "Create link with exists short URL",
-			requestBody: `{"url": "https://example.com"}`,
+			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomURL()),
 			want: want{
 				code:                http.StatusCreated,
 				responseContentType: "text/plain",
@@ -133,11 +165,21 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	}
 
 	client := resty.New()
-
 	router := NewRouter()
-	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, service.NewLinksService(repository.NewLinksRepository(cfg), cfg))
+	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
+	var db *sql.DB
+	var err error
+
+	if cfg.DB.DatabaseDSN != "" {
+		db, err = database.NewDatabaseConnectionPool(cfg)
+		require.NoError(t, err)
+	}
+
+	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	require.NoError(t, err)
+
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -176,15 +218,26 @@ func Test_links_CreateAndGet(t *testing.T) {
 	))
 
 	router := NewRouter()
-	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
 
-	RegisterLinksRoutes(router, service.NewLinksService(repository.NewLinksRepository(cfg), cfg))
+	cfg, _ := config.GetConfig(&config.FlagsInitialConfig{})
+	var db *sql.DB
+	var err error
+
+	if cfg.DB.DatabaseDSN != "" {
+		db, err = database.NewDatabaseConnectionPool(cfg)
+		require.NoError(t, err)
+	}
+
+	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	require.NoError(t, err)
+
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
 
 	t.Run("Get created link", func(t *testing.T) {
-		fullURL := "https://example.com/"
+		fullURL := generateRandomURL()
 
 		response, err := client.R().SetBody(fullURL).Post(server.URL)
 
@@ -192,9 +245,10 @@ func Test_links_CreateAndGet(t *testing.T) {
 
 		require.Equal(t, http.StatusCreated, response.StatusCode())
 
-		shortcut := string(response.Body())
+		res := strings.Split(string(response.Body()), "/")
 
-		response, err = client.R().Get(shortcut)
+		shortcut := res[len(res)-1]
+		response, err = client.R().Get(server.URL + "/" + shortcut)
 
 		require.NoError(t, err)
 

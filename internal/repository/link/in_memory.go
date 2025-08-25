@@ -1,0 +1,128 @@
+package link
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"sync"
+
+	"github.com/Alexey-zaliznuak/shortener/internal/config"
+	"github.com/Alexey-zaliznuak/shortener/internal/logger"
+	"github.com/Alexey-zaliznuak/shortener/internal/model"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
+	"github.com/Alexey-zaliznuak/shortener/internal/utils"
+)
+
+type InMemoryLinkRepository struct {
+	storage map[string]*model.Link // для удобства будем хранить и ссылки и шорткаты
+	mu      sync.RWMutex
+	config  *config.AppConfig
+}
+
+func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, error) {
+	r.mu.RLock()
+	l, ok := r.storage[shortcut]
+	r.mu.RUnlock()
+
+	if ok {
+		return l, nil
+	}
+	return l, database.ErrNotFound
+}
+
+func (r *InMemoryLinkRepository) GetByFullURL(url string) (*model.Link, error) {
+	r.mu.RLock()
+	l, ok := r.storage[url]
+	r.mu.RUnlock()
+
+	if ok {
+		return l, nil
+	}
+	return l, database.ErrNotFound
+}
+
+func (r *InMemoryLinkRepository) Create(link *model.Link, executer database.Executer) (*model.Link, bool, error) {
+	l, err := r.GetByFullURL(link.FullURL)
+
+	if err != database.ErrNotFound {
+		if err != nil {
+			return link, false, err
+		}
+
+		return l, false, err
+	}
+
+	r.mu.Lock()
+	r.storage[link.Shortcut] = link
+	r.storage[link.FullURL] = link
+	r.mu.Unlock()
+	return link, true, nil
+}
+
+func (r *InMemoryLinkRepository) LoadStoredData() error {
+	var storedData []*model.Link
+
+	file, err := os.OpenFile(r.config.DB.StoragePath, os.O_RDONLY|os.O_CREATE, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() { utils.LogErrorWrapper(file.Close()) }()
+
+	err = json.NewDecoder(file).Decode(&storedData)
+
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			logger.Log.Warn("Empty file storage")
+		} else {
+			return err
+		}
+	}
+
+	for _, link := range storedData {
+		r.Create(link, nil)
+	}
+
+	logger.Log.Info(fmt.Sprintf("Restored urls: %d", len(storedData)))
+
+	return nil
+}
+
+func (r *InMemoryLinkRepository) SaveInStorage() error {
+	var storedData []*model.Link
+
+	file, err := os.OpenFile(r.config.DB.StoragePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() { utils.LogErrorWrapper(file.Close()) }()
+
+	for _, link := range r.storage {
+		storedData = append(storedData, link)
+	}
+
+	err = json.NewEncoder(file).Encode(&storedData)
+
+	if err != nil {
+		return err
+	}
+
+	logger.Log.Info(fmt.Sprintf("Saved urls: %d", len(storedData)))
+
+	return nil
+}
+
+func (r *InMemoryLinkRepository) GetTransactionExecuter(ctx context.Context, opts *sql.TxOptions) (database.TransactionExecuter, error) {
+	return nil, database.ErrExecuterNotSupportTransactions
+}
+
+func NewInMemoryLinksRepository(config *config.AppConfig) *InMemoryLinkRepository {
+	return &InMemoryLinkRepository{config: config, storage: make(map[string]*model.Link)}
+}

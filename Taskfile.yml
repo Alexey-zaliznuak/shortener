@@ -28,7 +28,7 @@ tasks:
   test:
     desc: "Запустить unit-тесты"
     cmds:
-      - go test -v ./...
+      - go test -count=1 -v ./...
 
   t:
     desc: "Алиас для test"
@@ -48,11 +48,10 @@ tasks:
   st:
     desc: "Запустить конкретный тест через shortenertest-windows-amd64"
     cmds:
-      - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration -binary-path={{.MAIN}}.exe
+      - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration2 -binary-path={{.MAIN}}.exe
 
   high-load:
-    desc: "Собрать и сразу запустить"
-      # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
+    desc: "100 000 запросов на создание"
     cmds:
       - go build -o {{.LOAD_SCRIPT_BINARY_PATH}} {{.LOAD_SCRIPT_BINARY_PATH}}
       - '{{ .LOAD_SCRIPT_BINARY_PATH }}/{{ .LOAD_SCRIPT_BINARY_NAME }}'

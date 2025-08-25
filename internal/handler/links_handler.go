@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
@@ -21,7 +23,7 @@ func redirect(linksService *service.LinksService) gin.HandlerFunc {
 		shortcut := c.Param("shortcut")
 		fullURL, err := linksService.GetFullURLFromShort(shortcut)
 
-		if err != nil || fullURL == "" {
+		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -40,7 +42,7 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 		}
 
 		link := &model.Link{FullURL: string(body)}
-		err = linksService.CreateLink(link)
+		link, created, err := linksService.CreateLink(link)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -54,7 +56,13 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		c.String(http.StatusCreated, url)
+		status := http.StatusCreated
+		if !created {
+			fmt.Printf("Duplicate: %s", link.FullURL)
+			status = http.StatusConflict
+		}
+
+		c.String(status, url)
 	}
 }
 
@@ -76,7 +84,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 		}
 
 		link := &model.Link{FullURL: request.FullURL}
-		err = linksService.CreateLink(link)
+		link, created, err := linksService.CreateLink(link)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -90,13 +98,48 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, &createShortURLResponse{Result: shortURL})
+		status := http.StatusCreated
+		if !created {
+			status = http.StatusConflict
+		}
+
+		c.JSON(status, &createShortURLResponse{Result: shortURL})
 	}
 }
 
-func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService) {
+func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		body, err := c.GetRawData()
+
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		request := make([]*model.CreateLinkWithCorrelationIDRequestItem, 0, 100)
+
+		err = json.Unmarshal(body, &request)
+
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		response, err := linksService.BulkCreateWithCorrelationID(request, c)
+
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusCreated, response)
+	}
+}
+
+func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService))
 
-	router.POST("/api/shorten", createLinkWithJSONAPI(linksService))
 	router.POST("/", createLink(linksService))
+	router.POST("/api/shorten", createLinkWithJSONAPI(linksService))
+	router.POST("/api/shorten/batch", createLinkBatch(linksService))
 }
