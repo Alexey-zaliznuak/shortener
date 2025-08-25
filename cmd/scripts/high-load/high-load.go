@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -40,7 +41,7 @@ func createSingleLink(total int) {
 			for range total / goroutines {
 				_, err := client.R().SetBody(`{"url": "https://google.com"}`).Post("http://localhost:8080/api/shorten/")
 				if err != nil {
-					fmt.Println(err.Error())
+					logger.Log.Error(err.Error())
 				}
 			}
 			g.Done()
@@ -69,7 +70,7 @@ func createBigBatch(total int) {
 	err := json.NewEncoder(&body).Encode(data)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Log.Error(err.Error())
 		return
 	}
 
@@ -77,23 +78,26 @@ func createBigBatch(total int) {
 	_, err = client.R().SetBody(body.Bytes()).Post("http://localhost:8080/api/shorten/batch")
 
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Log.Error(err.Error())
 		return
 	}
 
 	end := time.Now()
-	fmt.Printf("Batch: average rows write per second: %f\n", float64(total)/float64(end.Sub(start).Seconds()))
+	logger.Log.Info(fmt.Sprintf("Batch: average rows write per second: %f\n", float64(total)/float64(end.Sub(start).Seconds())))
 }
 
 func main() {
-	createSingleLinkRequests := 0
+	createLinkSingleRequests := 0
 	createBatchRows := 1000
 
 	g := &sync.WaitGroup{}
 
+	logger.Initialize("debug")
+	defer logger.Log.Sync()
+
 	g.Add(1)
 	go func() {
-		createSingleLink(createSingleLinkRequests)
+		createSingleLink(createLinkSingleRequests)
 		g.Done()
 	}()
 

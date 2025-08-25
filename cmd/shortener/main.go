@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}
-	defer func(){ utils.LogErrorWrapper(linksRepository.SaveInStorage()) }()
+	defer func() { utils.LogErrorWrapper(linksRepository.SaveInStorage()) }()
 
 	if err := linksRepository.LoadStoredData(); err != nil {
 		logger.Log.Fatal(err.Error())

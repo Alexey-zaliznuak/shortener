@@ -8,20 +8,27 @@ import (
 	"strconv"
 )
 
+type DBFlagsInitialConfig struct {
+	DatabaseDSN *string
+}
+
 type FlagsInitialConfig struct {
 	StoragePath    *string
 	StartupAddress *string
-	DatabaseDSN    *string
 	BaseURL        *string
+
+	DB *DBFlagsInitialConfig
+}
+
+type DBConfig struct {
+	DatabaseDSN string
+	StoragePath string
 }
 
 type AppConfig struct {
 	LoggingLevel string
 
-	DB struct {
-		DatabaseDSN string
-		StoragePath string
-	}
+	DB DBConfig
 
 	Server struct {
 		BaseURL          string
@@ -64,8 +71,8 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 func (b *AppConfigBuilder) WithDatabaseDSN() *AppConfigBuilder {
 	def := ""
 
-	if b.flagsConfig.DatabaseDSN != nil && *b.flagsConfig.DatabaseDSN != "" {
-		def = *b.flagsConfig.DatabaseDSN
+	if b.flagsConfig.DB != nil && b.flagsConfig.DB.DatabaseDSN != nil && *b.flagsConfig.DB.DatabaseDSN != "" {
+		def = *b.flagsConfig.DB.DatabaseDSN
 	}
 
 	b.config.DB.DatabaseDSN = b.loadStringVariableFromEnv("DATABASE_CONN_STRING", &def)
@@ -138,8 +145,10 @@ func CreateFLagsInitialConfig() *FlagsInitialConfig {
 	return &FlagsInitialConfig{
 		StartupAddress: flag.String("a", "", "startup address"),
 		BaseURL:        flag.String("b", "", "short links url prefix"),
-		DatabaseDSN:    flag.String("d", "", "Database DSN"),
-		StoragePath:    flag.String("f", "", "storage path to save dump and load all data"),
+		DB: &DBFlagsInitialConfig{
+			DatabaseDSN: flag.String("d", "", "Database DSN"),
+		},
+		StoragePath: flag.String("f", "", "storage path to save dump and load all data"),
 	}
 }
 
