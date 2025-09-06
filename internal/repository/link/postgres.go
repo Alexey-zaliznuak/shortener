@@ -108,7 +108,7 @@ func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.E
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	// TODO: sync.once  with precompiled queries
+	// TODO: with precompiled queries
 	res, err := r.QueryRowContextWithRetry(ctx, fmt.Sprintf(
 		`INSERT INTO %s (url, shortcut)
 			VALUES ($1, $2)

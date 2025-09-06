@@ -3,3 +3,5 @@
 1. Из параметров запуска
 2. Из переменных среды
 3. Значения по умолчанию
+
+https://github.com/golangci/golangci-lint in github ci
