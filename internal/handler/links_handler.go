@@ -142,7 +142,7 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 		status := http.StatusOK
 		links, err := linksService.GetUserLinks(c)
 
-		if err == repository.ErrTokenValidation {
+		if err == http.ErrNoCookie {
 			c.String(http.StatusUnauthorized, "")
 			return
 		}
