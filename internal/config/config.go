@@ -25,10 +25,16 @@ type DBConfig struct {
 	StoragePath string
 }
 
+type AuthConfig struct {
+	TokenLifeTimeHours int
+	TokenSecretKey     string
+}
+
 type AppConfig struct {
 	LoggingLevel string
 
-	DB DBConfig
+	DB   DBConfig
+	Auth AuthConfig
 
 	Server struct {
 		BaseURL          string
@@ -44,10 +50,11 @@ type AppConfigBuilder struct {
 }
 
 var (
-	defaultStoragePath      = "storage.json"
-	defaultShortLinksLength = 8
-	defaultStartupAddress   = "localhost:8080"
-	defaultLoggingLevel     = "info"
+	defaultStoragePath        = "storage.json"
+	defaultShortLinksLength   = 8
+	defaultStartupAddress     = "localhost:8080"
+	defaultLoggingLevel       = "info"
+	defaultTokenLifeTimeHours = 24
 )
 
 func NewAppConfigBuilder(flagsConfig *FlagsInitialConfig) *AppConfigBuilder {
@@ -87,6 +94,20 @@ func (b *AppConfigBuilder) WithStoragePath() *AppConfigBuilder {
 	}
 
 	b.config.DB.StoragePath = b.loadStringVariableFromEnv("FILE_STORAGE_PATH", &def)
+
+	return b
+}
+
+func (b *AppConfigBuilder) WithTokenLifeTime() *AppConfigBuilder {
+	def := defaultTokenLifeTimeHours
+
+	b.config.Auth.TokenLifeTimeHours = b.loadIntVariableFromEnv("AUTH_TOKEN_LIFE_TIME_HOURS", &def)
+
+	return b
+}
+
+func (b *AppConfigBuilder) WithTokenSecretKey() *AppConfigBuilder {
+	b.config.Auth.TokenSecretKey = b.loadStringVariableFromEnv("AUTH_TOKEN_SECRET_KEY", nil)
 
 	return b
 }

@@ -5,3 +5,6 @@
 3. Значения по умолчанию
 
 https://github.com/golangci/golangci-lint in github ci
+
+# Migrations
+migrate create -ext sql -dir migrations -seq add_users_table
