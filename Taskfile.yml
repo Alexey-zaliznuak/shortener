@@ -1,0 +1,57 @@
+version: '3'
+
+vars:
+  BINARY_NAME: "shortener"
+  MAIN: "./cmd/shortener"
+
+  LOAD_SCRIPT_BINARY_NAME: "high-load"
+  LOAD_SCRIPT_BINARY_PATH: "./cmd/scripts/high-load"
+
+tasks:
+  default:
+    desc: "Собрать и сразу запустить с параметрами"
+      # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
+    cmds:
+      - go build -o {{.MAIN}} {{.MAIN}}
+      - '{{ .MAIN }}/{{ .BINARY_NAME }}'
+
+  build:
+    desc: "Собрать бинарник"
+    cmds:
+      - go build -o {{.MAIN}} {{.MAIN}}
+
+  b:
+    desc: "Алиас для build"
+    deps:
+      - build
+
+  test:
+    desc: "Запустить unit-тесты"
+    cmds:
+      - go test -count=1 -v ./...
+
+  t:
+    desc: "Алиас для test"
+    deps:
+      - test
+
+  run:
+    desc: "Запустить собранный бинарник"
+    cmds:
+      - '{{.MAIN}}.exe'
+
+  r:
+    desc: "Алиас для run"
+    deps:
+      - run
+
+  st:
+    desc: "Запустить конкретный тест через shortenertest-windows-amd64"
+    cmds:
+      - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration2 -binary-path={{.MAIN}}.exe
+
+  high-load:
+    desc: "100 000 запросов на создание"
+    cmds:
+      - go build -o {{.LOAD_SCRIPT_BINARY_PATH}} {{.LOAD_SCRIPT_BINARY_PATH}}
+      - '{{ .LOAD_SCRIPT_BINARY_PATH }}/{{ .LOAD_SCRIPT_BINARY_NAME }}'

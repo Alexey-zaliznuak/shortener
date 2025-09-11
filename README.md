@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # go-musthave-shortener-tpl
 
 Шаблон репозитория для трека «Сервис сокращения URL».
@@ -42,3 +43,10 @@ git fetch template && git checkout template/v2 .github
 - **Clean Architecture**
 - **Hexagonal Architecture**
 - **Layered Architecture**
+=======
+## Конфигурация
+Значение берется из первого пункта в котором оно указано:
+1. Из параметров запуска
+2. Из переменных среды
+3. Значения по умолчанию
+>>>>>>> 1145dc6a375a2b9d41af3d5ade450953b6d54bf5
