@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 type createShortURLRequest struct {
