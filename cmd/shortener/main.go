@@ -59,7 +59,8 @@ func main() {
 	linksService := service.NewLinksService(linksRepository, cfg)
 
 	router := handler.NewRouter()
-	handler.RegisterLinksRoutes(router, linksService, db)
+	authService := service.NewAuthService(cfg)
+	handler.RegisterLinksRoutes(router, linksService, authService, db)
 	handler.RegisterAppHandlerRoutes(router, db)
 
 	// Server process

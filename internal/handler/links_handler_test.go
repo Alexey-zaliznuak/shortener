@@ -92,9 +92,10 @@ func Test_links_createLink(t *testing.T) {
 	}
 
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	authService := service.NewAuthService(cfg)
 	require.NoError(t, err)
 
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -179,7 +180,8 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
 	require.NoError(t, err)
 
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
+	authService := service.NewAuthService(cfg)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -231,7 +233,8 @@ func Test_links_CreateAndGet(t *testing.T) {
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
 	require.NoError(t, err)
 
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
+	authService := service.NewAuthService(cfg)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()

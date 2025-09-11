@@ -137,14 +137,18 @@ func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func getUserLinks(linksService *service.LinksService) gin.HandlerFunc {
+func getUserLinks(linksService *service.LinksService, authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		status := http.StatusOK
 		links, err := linksService.GetUserLinks(c)
 
-		if err == http.ErrNoCookie || err == repository.ErrTokenValidation {
+		if err == repository.ErrTokenValidation {
 			c.String(http.StatusUnauthorized, "")
 			return
+		}
+
+		if err == repository.ErrTokenValidation {
+			_, err = authService.GetOrCreateAndSaveAuthorization(c)
 		}
 
 		if err != nil {
@@ -160,12 +164,12 @@ func getUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, db *sql.DB) {
+func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService))
 
 	router.POST("/", createLink(linksService))
 	router.POST("/api/shorten", createLinkWithJSONAPI(linksService))
 	router.POST("/api/shorten/batch", createLinkBatch(linksService))
 
-	router.GET("/api/user/urls", getUserLinks(linksService))
+	router.GET("/api/user/urls", getUserLinks(linksService, authService))
 }
