@@ -52,3 +52,6 @@ https://github.com/golangci/golangci-lint in github ci
 
 # Migrations
 migrate create -ext sql -dir migrations -seq add_users_table
+
+# тесты
+https://github.com/Yandex-Practicum/go-autotests/blob/main/cmd/shortenertest_v2/iteration14_test.go

@@ -4,11 +4,9 @@ import (
 	"net/http"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
-	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 )
 
 type AuthService struct {
@@ -18,23 +16,16 @@ type AuthService struct {
 func (service *AuthService) GetAuthorization(c *gin.Context) (*repository.Claims, error) {
 	auth, err := c.Cookie("Authorization")
 
-	logger.Log.Info("COOK AUTH:", zap.String("auth", auth))
-
 	if err != nil {
 		if err != http.ErrNoCookie {
 			return nil, err
 		}
 		auth = c.GetHeader("Authorization")
 
-		logger.Log.Info("COOK HEADER AUTH:", zap.String("auth", auth))
 		if auth == "" {
 			return nil, http.ErrNoCookie
 		}
 	}
-
-	p, err := service.Repository.ParsePayload(auth)
-
-	logger.Log.Info("RESULT AUTH:", zap.String("auth", auth), zap.String("userid", p.UserID))
 
 	return service.Repository.ParsePayload(auth)
 }

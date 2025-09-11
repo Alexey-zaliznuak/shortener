@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 type createShortURLRequest struct {
@@ -143,8 +141,6 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 	return func(c *gin.Context) {
 		status := http.StatusOK
 		links, err := linksService.GetUserLinks(c)
-
-		logger.Log.Error("ERROR", zap.Error(err))
 
 		_, err = authService.CreateAndSaveAuthorization(c)
 
