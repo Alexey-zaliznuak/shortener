@@ -145,7 +145,6 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 		links, err := linksService.GetUserLinks(c)
 
 		if err != nil && err != http.ErrNoCookie {
-			logger.Log.Error("ERROR", zap.Error(err))
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
