@@ -152,7 +152,7 @@ func getUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		if len(links) == 1 {
+		if len(links) == 0 {
 			status = http.StatusNoContent
 		}
 
