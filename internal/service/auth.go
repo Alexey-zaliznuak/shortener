@@ -58,6 +58,10 @@ func (service *AuthService) GetOrCreateAndSaveAuthorization(c *gin.Context) (*re
 		return auth, err
 	}
 
+	return service.CreateAndSaveAuthorization(c)
+}
+
+func (service *AuthService) CreateAndSaveAuthorization(c *gin.Context) (*repository.Claims, error) {
 	UserID, err := uuid.NewRandom()
 
 	if err != nil {

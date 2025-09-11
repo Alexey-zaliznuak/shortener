@@ -148,7 +148,8 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 		}
 
 		if err == repository.ErrTokenValidation {
-			_, err = authService.GetOrCreateAndSaveAuthorization(c)
+			_, err = authService.CreateAndSaveAuthorization(c)
+			status = http.StatusNoContent
 		}
 
 		if err != nil {
