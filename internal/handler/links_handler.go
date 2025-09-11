@@ -142,8 +142,27 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 		status := http.StatusOK
 		links, err := linksService.GetUserLinks(c)
 
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		_, err = authService.CreateAndSaveAuthorization(c)
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
 		if err == http.ErrNoCookie {
-			c.String(http.StatusUnauthorized, "")
+			c.String(http.StatusNoContent, "")
+
+			_, err = authService.CreateAndSaveAuthorization(c)
+
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
 			return
 		}
 
