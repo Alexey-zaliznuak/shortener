@@ -17,6 +17,7 @@ import (
 
 type LinksService struct {
 	repository link.LinkRepository
+	auth *AuthService
 	*config.AppConfig
 }
 
@@ -28,9 +29,25 @@ func (s *LinksService) GetFullURLFromShort(shortcut string) (string, error) {
 	return link.FullURL, nil
 }
 
-func (s *LinksService) CreateLink(link *model.Link) (*model.Link, bool, error) {
+func (s *LinksService) GetUserLinks(c *gin.Context) ([]*model.GetUserLinksRequestItem, error) {
+	claims, err := s.auth.GetAuthorization(c)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repository.GetByUserID(claims.UserID)
+}
+
+func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*model.Link, bool, error) {
+	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
+
+	if err != nil {
+		return nil, false, err
+	}
+
 	if !s.isValidURL(link.FullURL) {
-		return link, false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		return link.NewLink(auth.UserID), false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
 	if link.Shortcut == "" {
@@ -39,15 +56,21 @@ func (s *LinksService) CreateLink(link *model.Link) (*model.Link, bool, error) {
 		link.Shortcut, err = s.createUniqueShortcut()
 
 		if err != nil {
-			return link, false, err
+			return link.NewLink(auth.UserID), false, err
 		}
 	}
 
-	return s.repository.Create(link, nil)
+	return s.repository.Create(link, auth.UserID, nil)
 }
 
 func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWithCorrelationIDRequestItem, c *gin.Context) ([]*model.CreateLinkWithCorrelationIDResponseItem, error) {
 	var result []*model.CreateLinkWithCorrelationIDResponseItem
+
+	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
+
+	if err != nil {
+		return nil, err
+	}
 
 	transactionExecuter, err := s.repository.GetTransactionExecuter(context.Background(), nil)
 	supportTransaction := true
@@ -76,9 +99,9 @@ func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWith
 			return nil, err
 		}
 
-		newLink := &model.Link{FullURL: link.FullURL, Shortcut: shortcut}
+		l := &model.CreateLinkDto{FullURL: link.FullURL, Shortcut: shortcut}
 
-		newLink, _, err = s.repository.Create(newLink, transactionExecuter)
+		newLink, _, err := s.repository.Create(l, auth.UserID, transactionExecuter)
 
 		if err != nil {
 			if supportTransaction {
@@ -171,6 +194,7 @@ func (s *LinksService) isValidURL(u string) bool {
 func NewLinksService(repository link.LinkRepository, config *config.AppConfig) *LinksService {
 	return &LinksService{
 		repository: repository,
+		auth: NewAuthService(config),
 		AppConfig:  config,
 	}
 }

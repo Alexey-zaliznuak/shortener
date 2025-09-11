@@ -55,8 +55,8 @@ func (r *PostgreSQLLinksRepository) GetByShortcut(shortcut string) (*model.Link,
 	return result, nil
 }
 
-func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
-	result := []*model.Link{}
+func (r *PostgreSQLLinksRepository) GetByUserID(userID string) ([]*model.GetUserLinksRequestItem, error) {
+	result := []*model.GetUserLinksRequestItem{}
 
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
@@ -67,9 +67,11 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 			`
 			SELECT url, shortcut
 			FROM %s
+			WHERE userID = $1
 			`,
 			r.table,
 		),
+		userID,
 	)
 
 	if err != nil {
@@ -79,7 +81,7 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 	defer func() { utils.LogErrorWrapper(rows.Close()) }()
 
 	for rows.Next() {
-		l := &model.Link{}
+		l := &model.GetUserLinksRequestItem{}
 		err = rows.Scan(&l.FullURL, &l.Shortcut)
 		if err != nil {
 			logger.Log.Error(fmt.Sprintf("row scanning failing: %s", err.Error()))
@@ -96,8 +98,49 @@ func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
 	return result, err
 }
 
+func (r *PostgreSQLLinksRepository) getAll() ([]*model.Link, error) {
+	result := []*model.Link{}
+
+	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+	defer cancel()
+
+	rows, err := r.db.QueryContext(
+		ctx,
+		fmt.Sprintf(
+			`
+			SELECT url, shortcut, userID
+			FROM %s
+			`,
+			r.table,
+		),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() { utils.LogErrorWrapper(rows.Close()) }()
+
+	for rows.Next() {
+		l := &model.Link{}
+		err = rows.Scan(&l.FullURL, &l.Shortcut, &l.UserID)
+		if err != nil {
+			logger.Log.Error(fmt.Sprintf("row scanning failing: %s", err.Error()))
+			continue
+		}
+
+		result = append(result, l)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, err
+}
+
 // Will modify shortcut if find link with same full url
-func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.Executer) (*model.Link, bool, error) {
+func (r *PostgreSQLLinksRepository) Create(link *model.CreateLinkDto, UserID string, executer database.Executer) (*model.Link, bool, error) {
 	var exec database.Executer = r.db
 	oldShortcut := link.Shortcut
 
@@ -110,24 +153,25 @@ func (r *PostgreSQLLinksRepository) Create(link *model.Link, executer database.E
 
 	// TODO: with precompiled queries
 	res, err := r.QueryRowContextWithRetry(ctx, fmt.Sprintf(
-		`INSERT INTO %s (url, shortcut)
-			VALUES ($1, $2)
+		`INSERT INTO %s (url, shortcut, userID)
+			VALUES ($1, $2, $3)
 			ON CONFLICT (url) DO UPDATE SET shortcut = links.shortcut
-			RETURNING %s.url, %s.shortcut;
+			RETURNING %s.url, %s.shortcut, %s.userID;
 			`,
-		r.table, r.table, r.table,
+		r.table, r.table, r.table, r.table,
 	),
 		exec,
 		link.FullURL,
 		link.Shortcut,
+		UserID,
 	)
 
 	if err != nil {
-		return link, false, err
+		return link.NewLink(UserID), false, err
 	}
 
 	newLink := &model.Link{}
-	res.Scan(&newLink.FullURL, &newLink.Shortcut)
+	res.Scan(&newLink.FullURL, &newLink.Shortcut, &newLink.UserID)
 
 	return newLink, oldShortcut == newLink.Shortcut, nil
 }

@@ -12,14 +12,14 @@ var ErrTokenValidation = errors.New("invalid token signature")
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID int
+	UserID string
 }
 
 type AuthRepository struct {
 	config *config.AppConfig
 }
 
-func (repository *AuthRepository) BuildJWTString(UserID int) (string, error) {
+func (repository *AuthRepository) BuildJWTString(UserID string) (string, error) {
 	// создаём новый токен с алгоритмом подписи HS256 и утверждениями — Claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -58,6 +58,6 @@ func (repository *AuthRepository) ParsePayload(token string) (*Claims, error) {
 	return claims, nil
 }
 
-func NewRepository(config *config.AppConfig) *AuthRepository {
+func NewAuthRepository(config *config.AppConfig) *AuthRepository {
 	return &AuthRepository{config: config}
 }

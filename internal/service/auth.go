@@ -3,8 +3,10 @@ package service
 import (
 	"net/http"
 
+	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type AuthService struct {
@@ -28,14 +30,39 @@ func (service *AuthService) GetAuthorization(c *gin.Context) (*repository.Claims
 	return service.Repository.ParsePayload(auth)
 }
 
-func (service *AuthService) SaveAuthorization(UserID int, c *gin.Context) error {
+func (service *AuthService) SaveAuthorization(UserID string, c *gin.Context) (string, error) {
 	jwt, err := service.Repository.BuildJWTString(UserID)
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	c.SetCookie("Authorization", jwt, 86400, "/", "", false, true)
 
-	return nil
+	return jwt, nil
+}
+
+func (service *AuthService) GetOrCreateAndSaveAuthorization(c *gin.Context) (*repository.Claims, error) {
+	auth, err := service.GetAuthorization(c)
+
+	if err == nil {
+		return auth, err
+	}
+
+	UserID, err := uuid.NewRandom()
+
+	if err != nil {
+		return nil, err
+	}
+
+	jwt, err := service.SaveAuthorization(UserID.String(), c)
+	if err != nil {
+		return nil, err
+	}
+
+	return service.Repository.ParsePayload(jwt)
+}
+
+func NewAuthService(config *config.AppConfig) *AuthService {
+	return &AuthService{Repository: repository.NewAuthRepository(config)}
 }

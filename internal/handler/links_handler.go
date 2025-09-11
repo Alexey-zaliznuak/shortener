@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -42,7 +43,7 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 		}
 
 		link := &model.Link{FullURL: string(body)}
-		link, created, err := linksService.CreateLink(link)
+		link, created, err := linksService.CreateLink(link.ToCreateDto(), c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -83,8 +84,8 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		link := &model.Link{FullURL: request.FullURL}
-		link, created, err := linksService.CreateLink(link)
+		l := &model.CreateLinkDto{FullURL: request.FullURL}
+		link, created, err := linksService.CreateLink(l, c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -136,10 +137,35 @@ func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
+func getUserLinks(linksService *service.LinksService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		status := http.StatusOK
+		links, err := linksService.GetUserLinks(c)
+
+		if err == http.ErrNoCookie || err == repository.ErrTokenValidation {
+			c.String(http.StatusUnauthorized, "")
+			return
+		}
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		if len(links) == 1 {
+			status = http.StatusNoContent
+		}
+
+		c.JSON(status, links)
+	}
+}
+
 func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService))
 
 	router.POST("/", createLink(linksService))
 	router.POST("/api/shorten", createLinkWithJSONAPI(linksService))
 	router.POST("/api/shorten/batch", createLinkBatch(linksService))
+
+	router.GET("/api/user/urls", getUserLinks(linksService))
 }

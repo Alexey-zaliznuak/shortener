@@ -55,6 +55,7 @@ var (
 	defaultStartupAddress     = "localhost:8080"
 	defaultLoggingLevel       = "info"
 	defaultTokenLifeTimeHours = 24
+	defaultTokenSecretKey     = "superTokenSecretKey"
 )
 
 func NewAppConfigBuilder(flagsConfig *FlagsInitialConfig) *AppConfigBuilder {
@@ -107,7 +108,7 @@ func (b *AppConfigBuilder) WithTokenLifeTime() *AppConfigBuilder {
 }
 
 func (b *AppConfigBuilder) WithTokenSecretKey() *AppConfigBuilder {
-	b.config.Auth.TokenSecretKey = b.loadStringVariableFromEnv("AUTH_TOKEN_SECRET_KEY", nil)
+	b.config.Auth.TokenSecretKey = b.loadStringVariableFromEnv("AUTH_TOKEN_SECRET_KEY", &defaultTokenSecretKey)
 
 	return b
 }
@@ -181,5 +182,7 @@ var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
 		WithStartupAddress().
 		WithShortLinksLength().
 		WithLoggingLevel().
+		WithTokenSecretKey().
+		WithTokenLifeTime().
 		Build()
 }

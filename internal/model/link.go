@@ -3,6 +3,32 @@ package model
 type Link struct {
 	FullURL  string `json:"url"`
 	Shortcut string `json:"shortcut"`
+	UserID   string `json:"userID"`
+}
+
+func (l *Link) ToCreateDto() *CreateLinkDto {
+	return &CreateLinkDto{
+		FullURL:  l.FullURL,
+		Shortcut: l.Shortcut,
+	}
+}
+
+type GetUserLinksRequestItem struct {
+	FullURL       string `json:"original_url"`
+	Shortcut      string `json:"short_url"`
+}
+
+type CreateLinkDto struct {
+	FullURL  string `json:"url"`
+	Shortcut string `json:"shortcut"`
+}
+
+func (dto *CreateLinkDto) NewLink(userID string) *Link {
+	return &Link{
+		FullURL:  dto.FullURL,
+		Shortcut: dto.Shortcut,
+		UserID:   userID,
+	}
 }
 
 type CreateLinkWithCorrelationIDRequestItem struct {
