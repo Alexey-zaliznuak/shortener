@@ -211,14 +211,15 @@ func (r *PostgreSQLLinksRepository) LoadStoredData() error {
 				res, err := r.QueryRowContextWithRetry(
 					context.Background(),
 					fmt.Sprintf(
-						`INSERT INTO %s (url, shortcut)
-						VALUES ($1, $2)
+						`INSERT INTO %s (url, shortcut, userID)
+						VALUES ($1, $2, $3)
 						ON CONFLICT (url) DO NOTHING
 						RETURNING %s.url, %s.shortcut;
 					`, r.table, r.table, r.table),
 					tx,
 					link.FullURL,
 					link.Shortcut,
+					link.UserID,
 				)
 
 				if err != nil {
