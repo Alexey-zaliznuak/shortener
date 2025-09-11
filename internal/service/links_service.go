@@ -17,7 +17,7 @@ import (
 
 type LinksService struct {
 	repository link.LinkRepository
-	auth *AuthService
+	auth       *AuthService
 	*config.AppConfig
 }
 
@@ -36,7 +36,19 @@ func (s *LinksService) GetUserLinks(c *gin.Context) ([]*model.GetUserLinksReques
 		return nil, err
 	}
 
-	return s.repository.GetByUserID(claims.UserID)
+	links, err := s.repository.GetByUserID(claims.UserID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, l := range links {
+		l.Shortcut, err = s.BuildShortURL(l.Shortcut, c)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return links, err
 }
 
 func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*model.Link, bool, error) {
@@ -194,7 +206,7 @@ func (s *LinksService) isValidURL(u string) bool {
 func NewLinksService(repository link.LinkRepository, config *config.AppConfig) *LinksService {
 	return &LinksService{
 		repository: repository,
-		auth: NewAuthService(config),
+		auth:       NewAuthService(config),
 		AppConfig:  config,
 	}
 }
