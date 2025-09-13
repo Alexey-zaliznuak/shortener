@@ -1,9 +1,10 @@
 package model
 
 type Link struct {
-	FullURL  string `json:"url"`
-	Shortcut string `json:"shortcut"`
-	UserID   string `json:"userID"`
+	FullURL   string `json:"url"`
+	Shortcut  string `json:"shortcut"`
+	UserID    string `json:"userID"`
+	IsDeleted bool   `json:"isDeleted"`
 }
 
 func (l *Link) ToCreateDto() *CreateLinkDto {
@@ -14,8 +15,8 @@ func (l *Link) ToCreateDto() *CreateLinkDto {
 }
 
 type GetUserLinksRequestItem struct {
-	FullURL       string `json:"original_url"`
-	Shortcut      string `json:"short_url"`
+	FullURL  string `json:"original_url"`
+	Shortcut string `json:"short_url"`
 }
 
 type CreateLinkDto struct {
@@ -39,4 +40,11 @@ type CreateLinkWithCorrelationIDRequestItem struct {
 type CreateLinkWithCorrelationIDResponseItem struct {
 	Shortcut      string `json:"short_url"`
 	CorrelationID string `json:"correlation_id"`
+}
+
+type CreateShortURLRequest struct {
+	FullURL string `json:"url"`
+}
+type CreateShortURLResponse struct {
+	Result string `json:"result"`
 }

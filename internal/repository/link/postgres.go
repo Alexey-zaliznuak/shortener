@@ -15,6 +15,7 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/utils"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -35,7 +36,7 @@ func (r *PostgreSQLLinksRepository) GetByShortcut(shortcut string) (*model.Link,
 		ctx,
 		fmt.Sprintf(
 			`
-			SELECT url, shortcut
+			SELECT url, shortcut, is_deleted
 			FROM %s
 			WHERE shortcut = $1
 			`,
@@ -44,11 +45,14 @@ func (r *PostgreSQLLinksRepository) GetByShortcut(shortcut string) (*model.Link,
 		shortcut,
 	)
 
-	err := row.Scan(&result.FullURL, &result.Shortcut)
+	err := row.Scan(&result.FullURL, &result.Shortcut, &result.IsDeleted)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, database.ErrNotFound // или своя доменная ошибка NotFound
+			return nil, database.ErrNotFound
+		}
+		if result.IsDeleted {
+			return nil, database.ErrObjectDeleted
 		}
 		return nil, err
 	}
@@ -174,6 +178,24 @@ func (r *PostgreSQLLinksRepository) Create(link *model.CreateLinkDto, UserID str
 	res.Scan(&newLink.FullURL, &newLink.Shortcut, &newLink.UserID)
 
 	return newLink, oldShortcut == newLink.Shortcut, nil
+}
+
+func (r *PostgreSQLLinksRepository) DeleteUserLinks(shortcuts []string, userID string) error {
+	if len(shortcuts) == 0 {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+	defer cancel()
+
+	_, err := r.db.ExecContext(
+		ctx,
+		fmt.Sprintf(`DELETE FROM %s WHERE shortcut = ANY($1) AND userID = $2`, r.table),
+		pq.Array(shortcuts),
+		userID,
+	)
+
+	return err
 }
 
 func (r *PostgreSQLLinksRepository) LoadStoredData() error {

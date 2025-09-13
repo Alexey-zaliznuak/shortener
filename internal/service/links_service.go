@@ -8,7 +8,6 @@ import (
 	"net/url"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
-	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
@@ -73,6 +72,16 @@ func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*m
 	}
 
 	return s.repository.Create(link, auth.UserID, nil)
+}
+
+func (s *LinksService) DeleteUserLinks(shortcuts []string, c *gin.Context) error {
+	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
+
+	if err != nil {
+		return err
+	}
+
+	return s.repository.DeleteUserLinks(shortcuts, auth.UserID)
 }
 
 func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWithCorrelationIDRequestItem, c *gin.Context) ([]*model.CreateLinkWithCorrelationIDResponseItem, error) {
@@ -164,7 +173,6 @@ func (s *LinksService) createUniqueShortcut() (string, error) {
 	}
 
 	if _, err := s.repository.GetByShortcut(newShortcut); err != database.ErrNotFound {
-		logger.Log.Error(err.Error())
 		return "", fmt.Errorf("create link error: could not generate unique shortcut after %d attempts", maxAttempts)
 	}
 

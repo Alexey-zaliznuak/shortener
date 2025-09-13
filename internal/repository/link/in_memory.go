@@ -33,6 +33,9 @@ func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, er
 	r.shortMu.RUnlock()
 
 	if ok {
+		if l.IsDeleted {
+			return nil, database.ErrObjectDeleted
+		}
 		return l, nil
 	}
 	return l, database.ErrNotFound
@@ -74,15 +77,37 @@ func (r *InMemoryLinkRepository) Create(link *model.CreateLinkDto, UserID string
 		return l, false, err
 	}
 
+	newLink := link.NewLink(UserID)
+
 	r.shortMu.Lock()
-	r.shortStorage[link.Shortcut] = link.NewLink(UserID)
+	r.shortStorage[link.Shortcut] = newLink
 	r.shortMu.Unlock()
 
 	r.fullMu.Lock()
-	r.fullStorage[link.FullURL] = link.NewLink(UserID)
+	r.fullStorage[link.FullURL] = newLink
 	r.fullMu.Unlock()
 
-	return link.NewLink(UserID), true, nil
+	return newLink, true, nil
+}
+
+func (r *InMemoryLinkRepository) DeleteUserLinks(shortcuts []string, userID string) error {
+	for _, shortcut := range shortcuts {
+		r.shortMu.RLock()
+
+		link, ok := r.shortStorage[shortcut]
+
+		if !ok {
+			return database.ErrNotFound
+		}
+
+		if link.UserID == userID {
+			link.IsDeleted = true
+		}
+
+		r.shortMu.RUnlock()
+	}
+
+	return nil
 }
 
 func (r *InMemoryLinkRepository) LoadStoredData() error {

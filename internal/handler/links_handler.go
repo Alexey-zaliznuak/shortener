@@ -8,16 +8,10 @@ import (
 
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/gin-gonic/gin"
 )
-
-type createShortURLRequest struct {
-	FullURL string `json:"url"`
-}
-type createShortURLResponse struct {
-	Result string `json:"result"`
-}
 
 func redirect(linksService *service.LinksService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -25,6 +19,11 @@ func redirect(linksService *service.LinksService) gin.HandlerFunc {
 		fullURL, err := linksService.GetFullURLFromShort(shortcut)
 
 		if err != nil {
+			if err == database.ErrObjectDeleted {
+				c.String(http.StatusGone, "")
+				return
+			}
+
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -76,10 +75,12 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		request := &createShortURLRequest{}
+		request := &model.CreateShortURLRequest{}
 		err = json.Unmarshal(body, &request)
 
 		if err != nil {
+			fmt.Println("ERRR")
+			fmt.Println(err.Error())
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -88,6 +89,8 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 		link, created, err := linksService.CreateLink(l, c)
 
 		if err != nil {
+			fmt.Println("ERRR")
+			fmt.Println(err.Error())
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -104,7 +107,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 			status = http.StatusConflict
 		}
 
-		c.JSON(status, &createShortURLResponse{Result: shortURL})
+		c.JSON(status, &model.CreateShortURLResponse{Result: shortURL})
 	}
 }
 
@@ -184,6 +187,35 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 	}
 }
 
+func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		body, err := c.GetRawData()
+
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		request := make([]string, 0)
+
+		err = json.Unmarshal(body, &request)
+
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+
+		err = linksService.DeleteUserLinks(request, c)
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		c.Status(http.StatusAccepted)
+	}
+}
+
 func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService))
 
@@ -192,4 +224,5 @@ func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService,
 	router.POST("/api/shorten/batch", createLinkBatch(linksService))
 
 	router.GET("/api/user/urls", getUserLinks(linksService, authService))
+	router.DELETE("/api/user/urls", deleteUserLinks(linksService))
 }
