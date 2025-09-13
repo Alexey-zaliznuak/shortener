@@ -20,7 +20,7 @@ func redirect(linksService *service.LinksService) gin.HandlerFunc {
 
 		if err != nil {
 			if err == database.ErrObjectDeleted {
-				c.String(http.StatusGone, "")
+				c.Status(http.StatusGone)
 				return
 			}
 
@@ -79,8 +79,6 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 		err = json.Unmarshal(body, &request)
 
 		if err != nil {
-			fmt.Println("ERRR")
-			fmt.Println(err.Error())
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -89,8 +87,6 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 		link, created, err := linksService.CreateLink(l, c)
 
 		if err != nil {
-			fmt.Println("ERRR")
-			fmt.Println(err.Error())
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}

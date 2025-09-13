@@ -51,11 +51,13 @@ func (r *PostgreSQLLinksRepository) GetByShortcut(shortcut string) (*model.Link,
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, database.ErrNotFound
 		}
-		if result.IsDeleted {
-			return nil, database.ErrObjectDeleted
-		}
 		return nil, err
 	}
+
+	if result.IsDeleted {
+		return nil, database.ErrObjectDeleted
+	}
+
 	return result, nil
 }
 
@@ -188,13 +190,12 @@ func (r *PostgreSQLLinksRepository) DeleteUserLinks(shortcuts []string, userID s
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	_, err := r.db.ExecContext(
-		ctx,
-		fmt.Sprintf(`DELETE FROM %s WHERE shortcut = ANY($1) AND userID = $2`, r.table),
-		pq.Array(shortcuts),
-		userID,
+	query := fmt.Sprintf(
+		`UPDATE %s SET is_deleted = TRUE WHERE shortcut = ANY($1) AND userID = $2`,
+		r.table,
 	)
 
+	_, err := r.db.ExecContext(ctx, query, pq.Array(shortcuts), userID)
 	return err
 }
 
