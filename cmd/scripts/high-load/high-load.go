@@ -87,8 +87,8 @@ func createBigBatch(total int) {
 }
 
 func main() {
-	createLinkSingleRequests := 0
-	createBatchRows := 1000
+	createLinkSingleRequests := 100
+	createBatchRows := 0
 
 	g := &sync.WaitGroup{}
 
