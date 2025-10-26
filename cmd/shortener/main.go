@@ -59,14 +59,14 @@ func main() {
 
 	linksService := service.NewLinksService(linksRepository, cfg)
 
-	auditor := &audit.AuditorShortUrlOperationManager{}
+	auditor := &audit.AuditorShortURLOperationManager{}
 
 	if cfg.Audit.AuditFile != "" {
-		auditor.UseAuditor(&audit.AuditShortUrlOperationFile{FilePath: cfg.Audit.AuditFile})
+		auditor.UseAuditor(&audit.AuditShortURLOperationFile{FilePath: cfg.Audit.AuditFile})
 	}
 
 	if cfg.Audit.AuditURL != "" {
-		auditor.UseAuditor(&audit.AuditShortUrlOperationHttp{Url: cfg.Audit.AuditURL})
+		auditor.UseAuditor(&audit.AuditShortURLOperationHttp{URL: cfg.Audit.AuditURL})
 	}
 
 	router := handler.NewRouter()

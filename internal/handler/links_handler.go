@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func redirect(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager) gin.HandlerFunc {
+func redirect(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		shortcut := c.Param("shortcut")
 		fullURL, err := linksService.GetFullURLFromShort(shortcut)
@@ -26,7 +26,7 @@ func redirect(linksService *service.LinksService, authService *service.AuthServi
 			return
 		}
 
-		auditor.AuditNotify(audit.ShortUrlActionGet, claims.ID, fullURL)
+		auditor.AuditNotify(audit.ShortURLActionGet, claims.ID, fullURL)
 
 		if err != nil {
 			if err == database.ErrObjectDeleted {
@@ -42,7 +42,7 @@ func redirect(linksService *service.LinksService, authService *service.AuthServi
 	}
 }
 
-func createLink(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager) gin.HandlerFunc {
+func createLink(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
 
@@ -62,7 +62,7 @@ func createLink(linksService *service.LinksService, authService *service.AuthSer
 			return
 		}
 
-		auditor.AuditNotify(audit.ShortUrlActionCreate, claims.ID, fullURL)
+		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, fullURL)
 
 		link, created, err := linksService.CreateLink(link.ToCreateDto(), c)
 
@@ -88,7 +88,7 @@ func createLink(linksService *service.LinksService, authService *service.AuthSer
 	}
 }
 
-func createLinkWithJSONAPI(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager) gin.HandlerFunc {
+func createLinkWithJSONAPI(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
 
@@ -114,7 +114,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService, authService *serv
 			return
 		}
 
-		auditor.AuditNotify(audit.ShortUrlActionCreate, claims.ID, request.FullURL)
+		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, request.FullURL)
 
 		link, created, err := linksService.CreateLink(l, c)
 
@@ -242,7 +242,7 @@ func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager, db *sql.DB) {
+func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService, authService, auditor))
 
 	router.POST("/", createLink(linksService, authService, auditor))

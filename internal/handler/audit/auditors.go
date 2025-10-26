@@ -9,28 +9,28 @@ import (
 	"sync"
 )
 
-type AuditShortUrlOperationHttp struct {
-	Url string
+type AuditShortURLOperationHttp struct {
+	URL string
 }
 
-type AuditShortUrlOperationFile struct {
+type AuditShortURLOperationFile struct {
 	FilePath string
 	mu       sync.Mutex
 }
 
 type AuditPayload struct {
-	Ts     int64            `json:"ts"`
-	Action ShortUrlAction `json:"action"`
+	TS     int64          `json:"ts"`
+	Action ShortURLAction `json:"action"`
 	UserId string         `json:"user_id"`
-	Url    string         `json:"url"`
+	URL    string         `json:"url"`
 }
 
-func (a *AuditShortUrlOperationHttp) Audit(ts int64, action ShortUrlAction, userId string, url string) error {
+func (a *AuditShortURLOperationHttp) Audit(ts int64, action ShortURLAction, userID string, url string) error {
 	req := AuditPayload{
-		Ts:     ts,
+		TS:     ts,
 		Action: action,
-		UserId: userId,
-		Url:    url,
+		UserId: userID,
+		URL:    url,
 	}
 
 	data, err := json.Marshal(req)
@@ -38,7 +38,7 @@ func (a *AuditShortUrlOperationHttp) Audit(ts int64, action ShortUrlAction, user
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	resp, err := http.Post(a.Url, "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post(a.URL, "application/json", bytes.NewBuffer(data))
 
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
@@ -53,12 +53,12 @@ func (a *AuditShortUrlOperationHttp) Audit(ts int64, action ShortUrlAction, user
 	return nil
 }
 
-func (a *AuditShortUrlOperationFile) Audit(ts int64, action ShortUrlAction, userId string, url string) error {
+func (a *AuditShortURLOperationFile) Audit(ts int64, action ShortURLAction, userID string, url string) error {
 	req := AuditPayload{
-		Ts:     ts,
+		TS:     ts,
 		Action: action,
-		UserId: userId,
-		Url:    url,
+		UserId: userID,
+		URL:    url,
 	}
 
 	data, err := json.Marshal(req)

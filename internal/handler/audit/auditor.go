@@ -4,29 +4,29 @@ import "time"
 
 // возможно это стоит вынести в слой service?
 
-type ShortUrlAction = string
+type ShortURLAction = string
 
 var (
-	ShortUrlActionGet    ShortUrlAction = "follow"
-	ShortUrlActionCreate ShortUrlAction = "shorten"
+	ShortURLActionGet    ShortURLAction = "follow"
+	ShortURLActionCreate ShortURLAction = "shorten"
 )
 
-type AuditorShortUrlOperation interface {
-	Audit(ts int64, action ShortUrlAction, userId string, url string) error
+type AuditorShortURLOperation interface {
+	Audit(ts int64, action ShortURLAction, userID string, url string) error
 }
 
-type AuditorShortUrlOperationManager struct {
-	auditors []AuditorShortUrlOperation
+type AuditorShortURLOperationManager struct {
+	auditors []AuditorShortURLOperation
 }
 
-func (m *AuditorShortUrlOperationManager) AuditNotify(action ShortUrlAction, userId string, url string) {
+func (m *AuditorShortURLOperationManager) AuditNotify(action ShortURLAction, userID string, url string) {
 	ts := time.Now().Unix()
 
 	for _, auditor := range m.auditors {
-		auditor.Audit(ts, action, userId, url)
+		auditor.Audit(ts, action, userID, url)
 	}
 }
 
-func (m *AuditorShortUrlOperationManager) UseAuditor(newAuditor AuditorShortUrlOperation) {
+func (m *AuditorShortURLOperationManager) UseAuditor(newAuditor AuditorShortURLOperation) {
 	m.auditors = append(m.auditors, newAuditor)
 }
