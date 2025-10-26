@@ -20,7 +20,12 @@ func redirect(linksService *service.LinksService, authService *service.AuthServi
 		fullURL, err := linksService.GetFullURLFromShort(shortcut)
 
 		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
+			if err == database.ErrObjectDeleted {
+				c.Status(http.StatusGone)
+				return
+			}
+
+			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -32,16 +37,6 @@ func redirect(linksService *service.LinksService, authService *service.AuthServi
 		}
 
 		auditor.AuditNotify(audit.ShortURLActionGet, claims.ID, fullURL)
-
-		if err != nil {
-			if err == database.ErrObjectDeleted {
-				c.Status(http.StatusGone)
-				return
-			}
-
-			c.String(http.StatusBadRequest, err.Error())
-			return
-		}
 
 		c.Redirect(http.StatusTemporaryRedirect, fullURL)
 	}

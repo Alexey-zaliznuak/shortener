@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-type AuditShortURLOperationHttp struct {
+type AuditShortURLOperationHTTP struct {
 	URL string
 }
 
@@ -21,15 +21,15 @@ type AuditShortURLOperationFile struct {
 type AuditPayload struct {
 	TS     int64          `json:"ts"`
 	Action ShortURLAction `json:"action"`
-	UserId string         `json:"user_id"`
+	UserID string         `json:"user_id"`
 	URL    string         `json:"url"`
 }
 
-func (a *AuditShortURLOperationHttp) Audit(ts int64, action ShortURLAction, userID string, url string) error {
+func (a *AuditShortURLOperationHTTP) Audit(ts int64, action ShortURLAction, userID string, url string) error {
 	req := AuditPayload{
 		TS:     ts,
 		Action: action,
-		UserId: userID,
+		UserID: userID,
 		URL:    url,
 	}
 
@@ -57,7 +57,7 @@ func (a *AuditShortURLOperationFile) Audit(ts int64, action ShortURLAction, user
 	req := AuditPayload{
 		TS:     ts,
 		Action: action,
-		UserId: userID,
+		UserID: userID,
 		URL:    url,
 	}
 

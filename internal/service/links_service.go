@@ -83,6 +83,9 @@ func (s *LinksService) DeleteUserLinks(shortcuts []string, c *gin.Context) error
 		return err
 	}
 
+	fmt.Println(auth)
+	fmt.Println(shortcuts)
+
 	return s.repository.DeleteUserLinks(shortcuts, auth.UserID)
 }
 

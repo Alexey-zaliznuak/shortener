@@ -66,7 +66,7 @@ func main() {
 	}
 
 	if cfg.Audit.AuditURL != "" {
-		auditor.UseAuditor(&audit.AuditShortURLOperationHttp{URL: cfg.Audit.AuditURL})
+		auditor.UseAuditor(&audit.AuditShortURLOperationHTTP{URL: cfg.Audit.AuditURL})
 	}
 
 	router := handler.NewRouter()
