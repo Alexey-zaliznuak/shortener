@@ -19,6 +19,11 @@ func redirect(linksService *service.LinksService, authService *service.AuthServi
 		shortcut := c.Param("shortcut")
 		fullURL, err := linksService.GetFullURLFromShort(shortcut)
 
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
 		claims, err := authService.GetOrCreateAndSaveAuthorization(c)
 
 		if err != nil {
@@ -57,12 +62,12 @@ func createLink(linksService *service.LinksService, auditor *audit.AuditorShortU
 
 		link, claims, created, err := linksService.CreateLink(link.ToCreateDto(), c)
 
-		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, fullURL)
-
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
+
+		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, fullURL)
 
 		url, err := linksService.BuildShortURL(link.Shortcut, c)
 
@@ -102,12 +107,12 @@ func createLinkWithJSONAPI(linksService *service.LinksService, auditor *audit.Au
 
 		link, claims, created, err := linksService.CreateLink(l, c)
 
-		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, request.FullURL)
-
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
+
+		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, request.FullURL)
 
 		shortURL, err := linksService.BuildShortURL(link.Shortcut, c)
 

@@ -30,3 +30,9 @@ func (m *AuditorShortURLOperationManager) AuditNotify(action ShortURLAction, use
 func (m *AuditorShortURLOperationManager) UseAuditor(newAuditor AuditorShortURLOperation) {
 	m.auditors = append(m.auditors, newAuditor)
 }
+
+func NewAuditorShortURLOperationManager() *AuditorShortURLOperationManager {
+	return &AuditorShortURLOperationManager{
+		auditors: make([]AuditorShortURLOperation, 0),
+	}
+}

@@ -59,7 +59,7 @@ func main() {
 
 	linksService := service.NewLinksService(linksRepository, cfg)
 
-	auditor := &audit.AuditorShortURLOperationManager{}
+	auditor := audit.NewAuditorShortURLOperationManager()
 
 	if cfg.Audit.AuditFile != "" {
 		auditor.UseAuditor(&audit.AuditShortURLOperationFile{FilePath: cfg.Audit.AuditFile})
