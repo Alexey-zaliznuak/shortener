@@ -55,3 +55,7 @@ migrate create -ext sql -dir migrations -seq add_users_table
 
 # тесты
 https://github.com/Yandex-Practicum/go-autotests/blob/main/cmd/shortenertest_v2/iteration14_test.go
+
+# профилирование(сделал 1 инстанс парсера jwt что на большом количестве запросов сэкономило достаточно памяти)
+
+![Профилирование](image.png)
