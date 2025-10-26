@@ -9,6 +9,7 @@ import (
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/gin-gonic/gin"
@@ -50,15 +51,15 @@ func (s *LinksService) GetUserLinks(c *gin.Context) ([]*model.GetUserLinksReques
 	return links, err
 }
 
-func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*model.Link, bool, error) {
+func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*model.Link, *repository.Claims, bool, error) {
 	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
 
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	if !s.isValidURL(link.FullURL) {
-		return link.NewLink(auth.UserID), false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		return link.NewLink(auth.UserID), nil, false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
 	if link.Shortcut == "" {
@@ -67,11 +68,12 @@ func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*m
 		link.Shortcut, err = s.createUniqueShortcut()
 
 		if err != nil {
-			return link.NewLink(auth.UserID), false, err
+			return link.NewLink(auth.UserID), auth, false, err
 		}
 	}
+	l, created, err := s.repository.Create(link, auth.UserID, nil)
 
-	return s.repository.Create(link, auth.UserID, nil)
+	return l, auth, created, err
 }
 
 func (s *LinksService) DeleteUserLinks(shortcuts []string, c *gin.Context) error {

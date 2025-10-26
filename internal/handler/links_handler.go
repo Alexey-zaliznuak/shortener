@@ -42,7 +42,7 @@ func redirect(linksService *service.LinksService, authService *service.AuthServi
 	}
 }
 
-func createLink(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
+func createLink(linksService *service.LinksService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
 
@@ -55,16 +55,9 @@ func createLink(linksService *service.LinksService, authService *service.AuthSer
 
 		link := &model.Link{FullURL: fullURL}
 
-		claims, err := authService.GetOrCreateAndSaveAuthorization(c)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
+		link, claims, created, err := linksService.CreateLink(link.ToCreateDto(), c)
 
 		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, fullURL)
-
-		link, created, err := linksService.CreateLink(link.ToCreateDto(), c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -88,7 +81,7 @@ func createLink(linksService *service.LinksService, authService *service.AuthSer
 	}
 }
 
-func createLinkWithJSONAPI(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
+func createLinkWithJSONAPI(linksService *service.LinksService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
 
@@ -107,16 +100,9 @@ func createLinkWithJSONAPI(linksService *service.LinksService, authService *serv
 
 		l := &model.CreateLinkDto{FullURL: request.FullURL}
 
-		claims, err := authService.GetOrCreateAndSaveAuthorization(c)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
+		link, claims, created, err := linksService.CreateLink(l, c)
 
 		auditor.AuditNotify(audit.ShortURLActionCreate, claims.ID, request.FullURL)
-
-		link, created, err := linksService.CreateLink(l, c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -245,8 +231,8 @@ func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService, authService, auditor))
 
-	router.POST("/", createLink(linksService, authService, auditor))
-	router.POST("/api/shorten", createLinkWithJSONAPI(linksService, authService, auditor))
+	router.POST("/", createLink(linksService, auditor))
+	router.POST("/api/shorten", createLinkWithJSONAPI(linksService, auditor))
 	router.POST("/api/shorten/batch", createLinkBatch(linksService))
 
 	router.GET("/api/user/urls", getUserLinks(linksService, authService))
