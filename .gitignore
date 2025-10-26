@@ -29,3 +29,4 @@ vendor/
 test*.py
 
 txt.txt
+*.gz

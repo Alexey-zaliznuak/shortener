@@ -13,7 +13,7 @@ tasks:
       # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
     cmds:
       - go build -o {{.MAIN}} {{.MAIN}}
-      - '{{ .MAIN }}/{{ .BINARY_NAME }} --audit-file ./txt.txt'
+      - '{{ .MAIN }}/{{ .BINARY_NAME }}'
 
   build:
     desc: "Собрать бинарник"

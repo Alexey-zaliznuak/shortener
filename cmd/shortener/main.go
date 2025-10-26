@@ -19,6 +19,8 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/Alexey-zaliznuak/shortener/internal/utils"
 	"go.uber.org/zap"
+
+	_ "net/http/pprof"
 )
 
 func main() {
@@ -84,6 +86,11 @@ func main() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Log.Fatal(fmt.Errorf("listen: %w", err).Error())
 		}
+	}()
+
+	go func() {
+		logger.Log.Info("pprof listening on :9090")
+		http.ListenAndServe(":9090", nil) // nil → DefaultServeMux с pprof
 	}()
 
 	// Listen for the interrupt signal.

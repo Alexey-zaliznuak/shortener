@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"strconv"
 	"sync"
 	"time"
@@ -39,7 +40,11 @@ func createSingleLink(total int) {
 		g.Add(1)
 		go func() {
 			for range total / goroutines {
-				_, err := client.R().SetBody(`{"url": "https://google.com"}`).Post("http://localhost:8080/api/shorten/")
+				r := rand.Int64()
+				_, err := client.R().
+				SetBody(fmt.Sprintf(`{"url": "https://high-load.example.com/%d"}`, r)).
+				Post("http://localhost:8080/api/shorten/")
+
 				if err != nil {
 					logger.Log.Error(err.Error())
 				}
@@ -87,7 +92,7 @@ func createBigBatch(total int) {
 }
 
 func main() {
-	createLinkSingleRequests := 1
+	createLinkSingleRequests := 100
 	createBatchRows := 0
 
 	g := &sync.WaitGroup{}
