@@ -18,6 +18,9 @@ type FlagsInitialConfig struct {
 	BaseURL        *string
 
 	DB *DBFlagsInitialConfig
+
+	AuditURL  *string
+	AuditFile *string
 }
 
 type DBConfig struct {
@@ -35,6 +38,11 @@ type AppConfig struct {
 
 	DB   DBConfig
 	Auth AuthConfig
+
+	Audit struct {
+		AuditURL  string
+		AuditFile string
+	}
 
 	Server struct {
 		BaseURL          string
@@ -128,6 +136,22 @@ func (b *AppConfigBuilder) WithLoggingLevel() *AppConfigBuilder {
 	return b
 }
 
+func (b *AppConfigBuilder) WithAuditFile() *AppConfigBuilder {
+	if b.flagsConfig.AuditFile != nil {
+		b.config.Audit.AuditFile = *b.flagsConfig.AuditFile
+	}
+
+	return b
+}
+
+func (b *AppConfigBuilder) WithAuditURL() *AppConfigBuilder {
+	if b.flagsConfig.AuditURL != nil {
+		b.config.Audit.AuditURL = *b.flagsConfig.AuditURL
+	}
+
+	return b
+}
+
 func (b *AppConfigBuilder) Build() (*AppConfig, error) {
 	return b.config, errors.Join(b.Errors...)
 }
@@ -171,6 +195,8 @@ func CreateFLagsInitialConfig() *FlagsInitialConfig {
 			DatabaseDSN: flag.String("d", "", "Database DSN"),
 		},
 		StoragePath: flag.String("f", "", "storage path to save dump and load all data"),
+		AuditURL:    flag.String("audit-url", "", "audit HTTP endpoint URL"),
+		AuditFile:   flag.String("audit-file", "", "audit log file path"),
 	}
 }
 
@@ -184,5 +210,7 @@ var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
 		WithLoggingLevel().
 		WithTokenSecretKey().
 		WithTokenLifeTime().
+		WithAuditFile().
+		WithAuditURL().
 		Build()
 }

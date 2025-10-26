@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Alexey-zaliznuak/shortener/internal/handler/audit"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
@@ -13,10 +14,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func redirect(linksService *service.LinksService) gin.HandlerFunc {
+func redirect(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		shortcut := c.Param("shortcut")
 		fullURL, err := linksService.GetFullURLFromShort(shortcut)
+
+		claims, err := authService.GetOrCreateAndSaveAuthorization(c)
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		auditor.AuditNotify(audit.ShortUrlActionGet, claims.ID, fullURL)
 
 		if err != nil {
 			if err == database.ErrObjectDeleted {
@@ -32,7 +42,7 @@ func redirect(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func createLink(linksService *service.LinksService) gin.HandlerFunc {
+func createLink(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
 
@@ -41,7 +51,19 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 			return
 		}
 
-		link := &model.Link{FullURL: string(body)}
+		fullURL := string(body)
+
+		link := &model.Link{FullURL: fullURL}
+
+		claims, err := authService.GetOrCreateAndSaveAuthorization(c)
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		auditor.AuditNotify(audit.ShortUrlActionCreate, claims.ID, fullURL)
+
 		link, created, err := linksService.CreateLink(link.ToCreateDto(), c)
 
 		if err != nil {
@@ -66,7 +88,7 @@ func createLink(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
+func createLinkWithJSONAPI(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
 
@@ -84,6 +106,16 @@ func createLinkWithJSONAPI(linksService *service.LinksService) gin.HandlerFunc {
 		}
 
 		l := &model.CreateLinkDto{FullURL: request.FullURL}
+
+		claims, err := authService.GetOrCreateAndSaveAuthorization(c)
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		auditor.AuditNotify(audit.ShortUrlActionCreate, claims.ID, request.FullURL)
+
 		link, created, err := linksService.CreateLink(l, c)
 
 		if err != nil {
@@ -147,7 +179,6 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 		}
 
 		_, err = authService.CreateAndSaveAuthorization(c)
-
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
 			return
@@ -157,7 +188,6 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 			c.String(http.StatusNoContent, "")
 
 			_, err = authService.CreateAndSaveAuthorization(c)
-
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -212,11 +242,11 @@ func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
-func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, db *sql.DB) {
-	router.GET("/:shortcut", redirect(linksService))
+func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortUrlOperationManager, db *sql.DB) {
+	router.GET("/:shortcut", redirect(linksService, authService, auditor))
 
-	router.POST("/", createLink(linksService))
-	router.POST("/api/shorten", createLinkWithJSONAPI(linksService))
+	router.POST("/", createLink(linksService, authService, auditor))
+	router.POST("/api/shorten", createLinkWithJSONAPI(linksService, authService, auditor))
 	router.POST("/api/shorten/batch", createLinkBatch(linksService))
 
 	router.GET("/api/user/urls", getUserLinks(linksService, authService))

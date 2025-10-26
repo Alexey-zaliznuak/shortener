@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
+	"github.com/Alexey-zaliznuak/shortener/internal/handler/audit"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
@@ -95,7 +96,7 @@ func Test_links_createLink(t *testing.T) {
 	authService := service.NewAuthService(cfg)
 	require.NoError(t, err)
 
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, db)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, &audit.AuditorShortUrlOperationManager{}, db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -181,7 +182,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	require.NoError(t, err)
 
 	authService := service.NewAuthService(cfg)
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, db)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, &audit.AuditorShortUrlOperationManager{}, db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -234,7 +235,7 @@ func Test_links_CreateAndGet(t *testing.T) {
 	require.NoError(t, err)
 
 	authService := service.NewAuthService(cfg)
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, db)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, &audit.AuditorShortUrlOperationManager{}, db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
