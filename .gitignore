@@ -30,3 +30,5 @@ test*.py
 
 txt.txt
 *.gz
+
+docs/

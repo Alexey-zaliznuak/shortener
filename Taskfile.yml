@@ -10,13 +10,20 @@ vars:
 tasks:
   default:
     desc: "Собрать и сразу запустить с параметрами"
-      # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
+    deps:
+      - build
     cmds:
-      - go build -o {{.MAIN}} {{.MAIN}}
       - '{{ .MAIN }}/{{ .BINARY_NAME }}'
+
+  swag:
+    desc: "Собрать и сразу запустить с параметрами"
+    cmds:
+      - swag init -g cmd/shortener/main.go
 
   build:
     desc: "Собрать бинарник"
+    deps:
+      - swag
     cmds:
       - go build -o {{.MAIN}} {{.MAIN}}
 
@@ -35,16 +42,6 @@ tasks:
     deps:
       - test
 
-  run:
-    desc: "Запустить собранный бинарник"
-    cmds:
-      - '{{.MAIN}}.exe'
-
-  r:
-    desc: "Алиас для run"
-    deps:
-      - run
-
   lint:
     desc: "Форматирование"
     cmds:
@@ -56,7 +53,7 @@ tasks:
     cmds:
       - go test -bench . -benchmem
 
-  doc:
+  godoc:
     desc: "Документация"
     cmds:
       - pkgsite -open

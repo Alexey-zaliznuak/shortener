@@ -319,4 +319,6 @@ func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService,
 
 	router.GET("/api/user/urls", getUserLinks(linksService, authService))
 	router.DELETE("/api/user/urls", deleteUserLinks(linksService))
+
+	// router.GET("/api/public/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
