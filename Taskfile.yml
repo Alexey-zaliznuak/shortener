@@ -51,6 +51,12 @@ tasks:
       - gofmt -w .
       - goimports -w .
 
+  bench:
+    desc: "Бенчмарки"
+    cmds:
+      - go test -bench . -benchmem
+
+
   high-load:
     desc: "100 000 запросов на создание"
     cmds:

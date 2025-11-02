@@ -79,12 +79,18 @@ func (r *InMemoryLinkRepository) Create(link *model.CreateLinkDto, UserID string
 
 	newLink := link.NewLink(UserID)
 
+	// fmt.Println(1)
 	r.shortMu.Lock()
+	// fmt.Println(2)
 	r.shortStorage[link.Shortcut] = newLink
+	// fmt.Println(3)
 	r.shortMu.Unlock()
 
+	// fmt.Println(4)
 	r.fullMu.Lock()
+	// fmt.Println(5)
 	r.fullStorage[link.FullURL] = newLink
+	// fmt.Println(6)
 	r.fullMu.Unlock()
 
 	return newLink, true, nil
@@ -92,11 +98,12 @@ func (r *InMemoryLinkRepository) Create(link *model.CreateLinkDto, UserID string
 
 func (r *InMemoryLinkRepository) DeleteUserLinks(shortcuts []string, userID string) error {
 	for _, shortcut := range shortcuts {
-		r.shortMu.RLock()
+		r.shortMu.Lock() // Используем Lock вместо RLock, т.к. изменяем данные
 
 		link, ok := r.shortStorage[shortcut]
 
 		if !ok {
+			r.shortMu.Unlock()
 			return database.ErrNotFound
 		}
 
@@ -104,7 +111,7 @@ func (r *InMemoryLinkRepository) DeleteUserLinks(shortcuts []string, userID stri
 			link.IsDeleted = true
 		}
 
-		r.shortMu.RUnlock()
+		r.shortMu.Unlock()
 	}
 
 	return nil
