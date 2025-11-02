@@ -56,6 +56,10 @@ tasks:
     cmds:
       - go test -bench . -benchmem
 
+  doc:
+    desc: "Документация"
+    cmds:
+      - pkgsite -open
 
   high-load:
     desc: "100 000 запросов на создание"

@@ -1,3 +1,5 @@
+// Package handler provides HTTP handlers for the URL shortener service.
+// It includes endpoints for creating, retrieving, and managing shortened URLs.
 package handler
 
 import (
@@ -14,6 +16,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// redirect handles redirection from shortened URL to the original full URL.
+// @Summary      Redirect to original URL
+// @Description  Redirects from a shortened URL to the original full URL
+// @Tags         links
+// @Param        shortcut  path  string  true  "Short URL identifier"
+// @Success      307  "Temporary redirect to the original URL"
+// @Failure      400  {string}  string  "Invalid shortcut"
+// @Failure      410  "Link has been deleted"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /{shortcut} [get]
 func redirect(linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		shortcut := c.Param("shortcut")
@@ -42,6 +54,17 @@ func redirect(linksService *service.LinksService, authService *service.AuthServi
 	}
 }
 
+// createLink creates a new shortened URL from a plain text body.
+// @Summary      Create short URL (plain text)
+// @Description  Creates a shortened URL from plain text body containing the full URL
+// @Tags         links
+// @Accept       plain
+// @Produce      plain
+// @Param        url  body  string  true  "Full URL to shorten (raw text)"
+// @Success      201  {string}  string  "Created short URL"
+// @Success      409  {string}  string  "URL already exists, returns existing short URL"
+// @Failure      400  {string}  string  "Invalid request"
+// @Router       / [post]
 func createLink(linksService *service.LinksService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
@@ -81,6 +104,18 @@ func createLink(linksService *service.LinksService, auditor *audit.AuditorShortU
 	}
 }
 
+// createLinkWithJSONAPI creates a new shortened URL using JSON API format.
+// @Summary      Create short URL (JSON)
+// @Description  Creates a shortened URL using JSON request/response format
+// @Tags         links
+// @Accept       json
+// @Produce      json
+// @Param        request  body  model.CreateShortURLRequest  true  "URL to shorten"
+// @Success      201  {object}  model.CreateShortURLResponse  "Short URL created"
+// @Success      409  {object}  model.CreateShortURLResponse  "URL already exists"
+// @Failure      400  {string}  string  "Invalid request"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /api/shorten [post]
 func createLinkWithJSONAPI(linksService *service.LinksService, auditor *audit.AuditorShortURLOperationManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
@@ -125,6 +160,17 @@ func createLinkWithJSONAPI(linksService *service.LinksService, auditor *audit.Au
 	}
 }
 
+// createLinkBatch creates multiple shortened URLs in a single request.
+// @Summary      Create multiple short URLs
+// @Description  Creates multiple shortened URLs in a single batch request with correlation IDs
+// @Tags         links
+// @Accept       json
+// @Produce      json
+// @Param        request  body  []model.CreateLinkWithCorrelationIDRequestItem  true  "Array of URLs to shorten with correlation IDs"
+// @Success      201  {array}  model.CreateLinkWithCorrelationIDResponseItem  "Array of created short URLs"
+// @Failure      400  {string}  string  "Invalid request"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /api/shorten/batch [post]
 func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
@@ -154,6 +200,16 @@ func createLinkBatch(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
+// getUserLinks retrieves all shortened URLs created by the current user.
+// @Summary      Get user's URLs
+// @Description  Retrieves all shortened URLs created by the authenticated user
+// @Tags         user
+// @Produce      json
+// @Success      200  {array}  model.GetUserLinksRequestItem  "User's links"
+// @Success      204  "User has no links or no valid authentication"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /api/user/urls [get]
+// @Security     CookieAuth
 func getUserLinks(linksService *service.LinksService, authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		status := http.StatusOK
@@ -199,6 +255,17 @@ func getUserLinks(linksService *service.LinksService, authService *service.AuthS
 	}
 }
 
+// deleteUserLinks marks multiple shortened URLs as deleted for the current user.
+// @Summary      Delete user's URLs
+// @Description  Marks multiple shortened URLs as deleted (soft delete). Deletion is asynchronous.
+// @Tags         user
+// @Accept       json
+// @Param        shortcuts  body  []string  true  "Array of shortcut identifiers to delete"
+// @Success      202  "Deletion request accepted"
+// @Failure      400  {string}  string  "Invalid request"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /api/user/urls [delete]
+// @Security     CookieAuth
 func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		body, err := c.GetRawData()
@@ -228,6 +295,21 @@ func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
+// RegisterLinksRoutes registers all URL shortener routes to the provided Gin engine.
+// It sets up the following endpoints:
+//   - GET /:shortcut - redirect to full URL
+//   - POST / - create short URL (plain text)
+//   - POST /api/shorten - create short URL (JSON)
+//   - POST /api/shorten/batch - create multiple short URLs
+//   - GET /api/user/urls - get all user's URLs
+//   - DELETE /api/user/urls - delete user's URLs
+//
+// Parameters:
+//   - router: Gin engine instance to register routes on
+//   - linksService: service for managing links
+//   - authService: service for user authentication
+//   - auditor: auditor for logging URL operations
+//   - db: database connection (currently unused, reserved for future use)
 func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager, db *sql.DB) {
 	router.GET("/:shortcut", redirect(linksService, authService, auditor))
 
