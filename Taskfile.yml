@@ -45,10 +45,11 @@ tasks:
     deps:
       - run
 
-  st:
-    desc: "Запустить конкретный тест через shortenertest-windows-amd64"
+  lint:
+    desc: "Форматирование"
     cmds:
-      - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration2 -binary-path={{.MAIN}}.exe
+      - gofmt -w .
+      - goimports -w .
 
   high-load:
     desc: "100 000 запросов на создание"

@@ -42,8 +42,8 @@ func createSingleLink(total int) {
 			for range total / goroutines {
 				r := rand.Int64()
 				_, err := client.R().
-				SetBody(fmt.Sprintf(`{"url": "https://high-load.example.com/%d"}`, r)).
-				Post("http://localhost:8080/api/shorten/")
+					SetBody(fmt.Sprintf(`{"url": "https://high-load.example.com/%d"}`, r)).
+					Post("http://localhost:8080/api/shorten/")
 
 				if err != nil {
 					logger.Log.Error(err.Error())
