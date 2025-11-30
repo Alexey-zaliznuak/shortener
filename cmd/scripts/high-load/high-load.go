@@ -11,6 +11,7 @@ import (
 
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
 )
 
 type CreateBatchRequest struct {
@@ -46,7 +47,7 @@ func createSingleLink(total int) {
 					Post("http://localhost:8080/api/shorten/")
 
 				if err != nil {
-					logger.Log.Error(err.Error())
+					logger.Log.Error("Ошибка", zap.Error(err))
 				}
 			}
 			g.Done()

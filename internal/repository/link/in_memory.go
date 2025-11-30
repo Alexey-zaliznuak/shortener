@@ -79,18 +79,12 @@ func (r *InMemoryLinkRepository) Create(link *model.CreateLinkDto, UserID string
 
 	newLink := link.NewLink(UserID)
 
-	// fmt.Println(1)
 	r.shortMu.Lock()
-	// fmt.Println(2)
 	r.shortStorage[link.Shortcut] = newLink
-	// fmt.Println(3)
 	r.shortMu.Unlock()
 
-	// fmt.Println(4)
 	r.fullMu.Lock()
-	// fmt.Println(5)
 	r.fullStorage[link.FullURL] = newLink
-	// fmt.Println(6)
 	r.fullMu.Unlock()
 
 	return newLink, true, nil

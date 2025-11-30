@@ -48,6 +48,12 @@ tasks:
       - gofmt -w .
       - goimports -w .
 
+  linter:
+    desc: "Запустить кастомный линтер noexit"
+    cmds:
+      - go build -o bin/linter.exe ./cmd/linter
+      - ./bin/linter.exe ./...
+
   bench:
     desc: "Бенчмарки"
     cmds:
