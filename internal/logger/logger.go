@@ -16,7 +16,7 @@ func Initialize(level string) error {
 
 	cfg.Level = lvl
 	cfg.EncoderConfig.TimeKey = "timestamp"
-    cfg.EncoderConfig.MessageKey = "message"
+	cfg.EncoderConfig.MessageKey = "message"
 
 	configuredLogger, err := cfg.Build()
 

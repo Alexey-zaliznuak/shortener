@@ -12,15 +12,28 @@ import (
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler"
+	"github.com/Alexey-zaliznuak/shortener/internal/handler/audit"
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/Alexey-zaliznuak/shortener/internal/utils"
 	"go.uber.org/zap"
+
+	_ "net/http/pprof"
+)
+
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
 )
 
 func main() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
 	var db *sql.DB
 
 	// Init config
@@ -50,7 +63,7 @@ func main() {
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}
-	defer func(){ utils.LogErrorWrapper(linksRepository.SaveInStorage()) }()
+	defer func() { utils.LogErrorWrapper(linksRepository.SaveInStorage()) }()
 
 	if err := linksRepository.LoadStoredData(); err != nil {
 		logger.Log.Fatal(err.Error())
@@ -58,8 +71,19 @@ func main() {
 
 	linksService := service.NewLinksService(linksRepository, cfg)
 
+	auditor := audit.NewAuditorShortURLOperationManager()
+
+	if cfg.Audit.AuditFile != "" {
+		auditor.UseAuditor(&audit.AuditShortURLOperationFile{FilePath: cfg.Audit.AuditFile})
+	}
+
+	if cfg.Audit.AuditURL != "" {
+		auditor.UseAuditor(&audit.AuditShortURLOperationHTTP{URL: cfg.Audit.AuditURL})
+	}
+
 	router := handler.NewRouter()
-	handler.RegisterLinksRoutes(router, linksService, db)
+	authService := service.NewAuthService(cfg)
+	handler.RegisterLinksRoutes(router, linksService, authService, auditor, db)
 	handler.RegisterAppHandlerRoutes(router, db)
 
 	// Server process
@@ -73,6 +97,11 @@ func main() {
 			logger.Log.Fatal(fmt.Errorf("listen: %w", err).Error())
 		}
 	}()
+
+	// go func() {
+	// 	logger.Log.Info("pprof listening on :9090")
+	// 	http.ListenAndServe(":9090", nil)
+	// }()
 
 	// Listen for the interrupt signal.
 	<-ctx.Done()

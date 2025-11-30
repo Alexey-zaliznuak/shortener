@@ -10,11 +10,6 @@ import (
 
 func checkHealth(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if db == nil {
-			c.String(http.StatusInternalServerError, "Database connection not configured")
-			return
-		}
-
 		err := db.PingContext(context.Background())
 
 		if err != nil {
@@ -22,10 +17,12 @@ func checkHealth(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.String(http.StatusOK, "OK")
+		c.String(http.StatusOK, "")
 	}
 }
 
 func RegisterAppHandlerRoutes(router *gin.Engine, db *sql.DB) {
-	router.GET("/ping", checkHealth(db))
+	if db != nil {
+		router.GET("/ping", checkHealth(db))
+	}
 }

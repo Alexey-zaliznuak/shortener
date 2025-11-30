@@ -43,6 +43,7 @@ const (
 
 var (
 	ErrNotFound                       = errors.New("not found")
+	ErrObjectDeleted                  = errors.New("deleted")
 	ErrExecuterNotSupportTransactions = errors.New("chosen repository does not support transactions")
 )
 
