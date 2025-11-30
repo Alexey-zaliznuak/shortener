@@ -1,6 +1,7 @@
 // Package config предоставляет функциональность для управления конфигурацией приложения.
 // Конфигурация загружается из флагов командной строки и переменных окружения,
 // с приоритетом переменных окружения над флагами.
+//go:generate go run ../../cmd/reset
 package config
 
 import (
@@ -52,6 +53,7 @@ type AuthConfig struct {
 }
 
 // AppConfig содержит полную конфигурацию приложения.
+// generate:reset
 type AppConfig struct {
 	// LoggingLevel содержит уровень логирования.
 	LoggingLevel string
