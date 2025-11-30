@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # go-musthave-shortener-tpl
 
 Шаблон репозитория для трека «Сервис сокращения URL».
@@ -43,10 +42,20 @@ git fetch template && git checkout template/v2 .github
 - **Clean Architecture**
 - **Hexagonal Architecture**
 - **Layered Architecture**
-=======
+
 ## Конфигурация
 Значение берется из первого пункта в котором оно указано:
 1. Из параметров запуска
 2. Из переменных среды
 3. Значения по умолчанию
->>>>>>> 1145dc6a375a2b9d41af3d5ade450953b6d54bf5
+https://github.com/golangci/golangci-lint in github ci
+
+# Migrations
+migrate create -ext sql -dir migrations -seq add_users_table
+
+# тесты
+https://github.com/Yandex-Practicum/go-autotests/blob/main/cmd/shortenertest_v2/iteration14_test.go
+
+# профилирование(сделал 1 инстанс парсера jwt что на большом количестве запросов сэкономило достаточно памяти)
+
+![Профилирование](image.png)

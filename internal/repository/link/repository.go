@@ -11,7 +11,9 @@ import (
 
 type LinkRepository interface {
 	GetByShortcut(shortcut string) (*model.Link, error)
-	Create(link *model.Link, executer database.Executer) (*model.Link, bool, error)
+	GetByUserID(userID string) ([]*model.GetUserLinksRequestItem, error)
+	Create(link *model.CreateLinkDto, userID string, executer database.Executer) (*model.Link, bool, error)
+	DeleteUserLinks(shortcuts []string, userID string) error
 	LoadStoredData() error
 	SaveInStorage() error
 	GetTransactionExecuter(ctx context.Context, opts *sql.TxOptions) (database.TransactionExecuter, error)
