@@ -1,17 +1,78 @@
 // Package config предоставляет функциональность для управления конфигурацией приложения.
-// Конфигурация загружается из флагов командной строки и переменных окружения,
-// с приоритетом переменных окружения над флагами.
+// Конфигурация загружается из флагов командной строки, переменных окружения и JSON-файла,
+// с приоритетом: переменные окружения > флаги > JSON-файл.
 //
 //go:generate go run ../../cmd/reset
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"strconv"
 )
+
+// JSONConfig содержит конфигурацию из JSON-файла.
+type JSONConfig struct {
+	// ServerAddress содержит адрес сервера (аналог флага -a и SERVER_ADDRESS).
+	ServerAddress string `json:"server_address"`
+	// BaseURL содержит базовый URL для коротких ссылок (аналог флага -b и BASE_URL).
+	BaseURL string `json:"base_url"`
+	// FileStoragePath содержит путь к файлу хранилища (аналог флага -f и FILE_STORAGE_PATH).
+	FileStoragePath string `json:"file_storage_path"`
+	// DatabaseDSN содержит строку подключения к БД (аналог флага -d и DATABASE_DSN).
+	DatabaseDSN string `json:"database_dsn"`
+	// EnableHTTPS включает HTTPS режим (аналог флага -s и ENABLE_HTTPS).
+	EnableHTTPS bool `json:"enable_https"`
+	// LoggingLevel содержит уровень логирования (аналог LOGGING_LEVEL).
+	LoggingLevel string `json:"logging_level"`
+	// ShortLinksLength содержит длину коротких ссылок (аналог SHORT_LINKS_LENGTH).
+	ShortLinksLength int `json:"short_links_length"`
+	// TokenLifeTimeHours содержит время жизни токена в часах (аналог AUTH_TOKEN_LIFE_TIME_HOURS).
+	TokenLifeTimeHours int `json:"token_life_time_hours"`
+	// TokenSecretKey содержит секретный ключ для токенов (аналог AUTH_TOKEN_SECRET_KEY).
+	TokenSecretKey string `json:"token_secret_key"`
+	// AuditURL содержит URL для аудита (аналог флага -audit-url).
+	AuditURL string `json:"audit_url"`
+	// AuditFile содержит путь к файлу аудита (аналог флага -audit-file).
+	AuditFile string `json:"audit_file"`
+}
+
+// LoadJSONConfig загружает конфигурацию из JSON-файла.
+// Возвращает nil, если путь пуст или файл не найден.
+func LoadJSONConfig(configPath string) (*JSONConfig, error) {
+	if configPath == "" {
+		return nil, nil
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var cfg JSONConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+// getConfigPath возвращает путь к файлу конфигурации из флага или переменной окружения.
+func getConfigPath(flagConfigPath *string) string {
+	if envPath := os.Getenv("CONFIG"); envPath != "" {
+		return envPath
+	}
+	if flagConfigPath != nil && *flagConfigPath != "" {
+		return *flagConfigPath
+	}
+	return ""
+}
 
 // DBFlagsInitialConfig содержит начальную конфигурацию базы данных из флагов.
 type DBFlagsInitialConfig struct {
@@ -38,6 +99,9 @@ type FlagsInitialConfig struct {
 
 	// EnableHTTPS включает HTTPS режим для сервера.
 	EnableHTTPS *bool
+
+	// ConfigPath содержит путь к файлу конфигурации JSON.
+	ConfigPath *string
 }
 
 // DBConfig содержит конфигурацию базы данных и хранилища.
@@ -92,7 +156,8 @@ type AppConfig struct {
 type AppConfigBuilder struct {
 	config      *AppConfig
 	flagsConfig *FlagsInitialConfig
-	// Errors содержит список ошибок, возникших при построении конфигурации.
+	jsonConfig  *JSONConfig
+
 	Errors []error
 }
 
@@ -106,16 +171,21 @@ var (
 )
 
 // NewAppConfigBuilder создает новый экземпляр AppConfigBuilder с указанной начальной конфигурацией флагов.
-func NewAppConfigBuilder(flagsConfig *FlagsInitialConfig) *AppConfigBuilder {
+func NewAppConfigBuilder(flagsConfig *FlagsInitialConfig, jsonConfig *JSONConfig) *AppConfigBuilder {
 	return &AppConfigBuilder{
-		config: &AppConfig{}, flagsConfig: flagsConfig,
+		config:      &AppConfig{},
+		flagsConfig: flagsConfig,
+		jsonConfig:  jsonConfig,
 	}
 }
 
-// WithStartupAddress устанавливает адрес запуска сервера из переменной окружения SERVER_ADDRESS
-// или флага командной строки. Если ни один не указан, используется значение по умолчанию.
+// WithStartupAddress устанавливает адрес запуска сервера из переменной окружения SERVER_ADDRESS,
 func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 	def := defaultStartupAddress
+
+	if b.jsonConfig != nil && b.jsonConfig.ServerAddress != "" {
+		def = b.jsonConfig.ServerAddress
+	}
 
 	if b.flagsConfig.StartupAddress != nil && *b.flagsConfig.StartupAddress != "" {
 		def = *b.flagsConfig.StartupAddress
@@ -127,9 +197,12 @@ func (b *AppConfigBuilder) WithStartupAddress() *AppConfigBuilder {
 }
 
 // WithDatabaseDSN устанавливает строку подключения к базе данных из переменной окружения
-// DATABASE_CONN_STRING или флага командной строки.
 func (b *AppConfigBuilder) WithDatabaseDSN() *AppConfigBuilder {
 	def := ""
+
+	if b.jsonConfig != nil && b.jsonConfig.DatabaseDSN != "" {
+		def = b.jsonConfig.DatabaseDSN
+	}
 
 	if b.flagsConfig.DB != nil && b.flagsConfig.DB.DatabaseDSN != nil && *b.flagsConfig.DB.DatabaseDSN != "" {
 		def = *b.flagsConfig.DB.DatabaseDSN
@@ -140,9 +213,12 @@ func (b *AppConfigBuilder) WithDatabaseDSN() *AppConfigBuilder {
 }
 
 // WithStoragePath устанавливает путь к файлу хранилища из переменной окружения
-// FILE_STORAGE_PATH или флага командной строки. Если ни один не указан, используется значение по умолчанию.
 func (b *AppConfigBuilder) WithStoragePath() *AppConfigBuilder {
 	def := defaultStoragePath
+
+	if b.jsonConfig != nil && b.jsonConfig.FileStoragePath != "" {
+		def = b.jsonConfig.FileStoragePath
+	}
 
 	if b.flagsConfig.StoragePath != nil && *b.flagsConfig.StoragePath != "" {
 		def = *b.flagsConfig.StoragePath
@@ -154,9 +230,12 @@ func (b *AppConfigBuilder) WithStoragePath() *AppConfigBuilder {
 }
 
 // WithTokenLifeTime устанавливает время жизни токена из переменной окружения
-// AUTH_TOKEN_LIFE_TIME_HOURS. Если не указано, используется значение по умолчанию.
 func (b *AppConfigBuilder) WithTokenLifeTime() *AppConfigBuilder {
 	def := defaultTokenLifeTimeHours
+
+	if b.jsonConfig != nil && b.jsonConfig.TokenLifeTimeHours > 0 {
+		def = b.jsonConfig.TokenLifeTimeHours
+	}
 
 	b.config.Auth.TokenLifeTimeHours = b.loadIntVariableFromEnv("AUTH_TOKEN_LIFE_TIME_HOURS", &def)
 
@@ -164,55 +243,93 @@ func (b *AppConfigBuilder) WithTokenLifeTime() *AppConfigBuilder {
 }
 
 // WithTokenSecretKey устанавливает секретный ключ токена из переменной окружения
-// AUTH_TOKEN_SECRET_KEY. Если не указано, используется значение по умолчанию.
 func (b *AppConfigBuilder) WithTokenSecretKey() *AppConfigBuilder {
-	b.config.Auth.TokenSecretKey = b.loadStringVariableFromEnv("AUTH_TOKEN_SECRET_KEY", &defaultTokenSecretKey)
+	def := defaultTokenSecretKey
+
+	if b.jsonConfig != nil && b.jsonConfig.TokenSecretKey != "" {
+		def = b.jsonConfig.TokenSecretKey
+	}
+
+	b.config.Auth.TokenSecretKey = b.loadStringVariableFromEnv("AUTH_TOKEN_SECRET_KEY", &def)
 
 	return b
 }
 
-// WithBaseURL устанавливает базовый URL из переменной окружения BASE_URL или флага командной строки.
+// WithBaseURL устанавливает базовый URL из переменной окружения BASE_URL
 func (b *AppConfigBuilder) WithBaseURL() *AppConfigBuilder {
-	b.config.Server.BaseURL = b.loadStringVariableFromEnv("BASE_URL", b.flagsConfig.BaseURL)
+	var def *string
+
+	if b.jsonConfig != nil && b.jsonConfig.BaseURL != "" {
+		def = &b.jsonConfig.BaseURL
+	}
+
+	if b.flagsConfig.BaseURL != nil && *b.flagsConfig.BaseURL != "" {
+		def = b.flagsConfig.BaseURL
+	}
+
+	b.config.Server.BaseURL = b.loadStringVariableFromEnv("BASE_URL", def)
 	return b
 }
 
 // WithShortLinksLength устанавливает длину коротких ссылок из переменной окружения
-// SHORT_LINKS_LENGTH. Если не указано, используется значение по умолчанию.
 func (b *AppConfigBuilder) WithShortLinksLength() *AppConfigBuilder {
-	b.config.Server.ShortLinksLength = b.loadIntVariableFromEnv("SHORT_LINKS_LENGTH", &defaultShortLinksLength)
+	def := defaultShortLinksLength
+
+	if b.jsonConfig != nil && b.jsonConfig.ShortLinksLength > 0 {
+		def = b.jsonConfig.ShortLinksLength
+	}
+
+	b.config.Server.ShortLinksLength = b.loadIntVariableFromEnv("SHORT_LINKS_LENGTH", &def)
 	return b
 }
 
 // WithLoggingLevel устанавливает уровень логирования из переменной окружения
-// LOGGING_LEVEL. Если не указано, используется значение по умолчанию.
 func (b *AppConfigBuilder) WithLoggingLevel() *AppConfigBuilder {
-	b.config.LoggingLevel = b.loadStringVariableFromEnv("LOGGING_LEVEL", &defaultLoggingLevel)
+	def := defaultLoggingLevel
+
+	if b.jsonConfig != nil && b.jsonConfig.LoggingLevel != "" {
+		def = b.jsonConfig.LoggingLevel
+	}
+
+	b.config.LoggingLevel = b.loadStringVariableFromEnv("LOGGING_LEVEL", &def)
 	return b
 }
 
-// WithAuditFile устанавливает путь к файлу аудита из флага командной строки.
+// WithAuditFile устанавливает путь к файлу аудита из переменной окружения
 func (b *AppConfigBuilder) WithAuditFile() *AppConfigBuilder {
-	if b.flagsConfig.AuditFile != nil {
+
+	if b.jsonConfig != nil && b.jsonConfig.AuditFile != "" {
+		b.config.Audit.AuditFile = b.jsonConfig.AuditFile
+	}
+
+	if b.flagsConfig.AuditFile != nil && *b.flagsConfig.AuditFile != "" {
 		b.config.Audit.AuditFile = *b.flagsConfig.AuditFile
 	}
 
 	return b
 }
 
-// WithAuditURL устанавливает URL аудита из флага командной строки.
+// WithAuditURL устанавливает URL аудита из переменной окружения
 func (b *AppConfigBuilder) WithAuditURL() *AppConfigBuilder {
-	if b.flagsConfig.AuditURL != nil {
+
+	if b.jsonConfig != nil && b.jsonConfig.AuditURL != "" {
+		b.config.Audit.AuditURL = b.jsonConfig.AuditURL
+	}
+
+	if b.flagsConfig.AuditURL != nil && *b.flagsConfig.AuditURL != "" {
 		b.config.Audit.AuditURL = *b.flagsConfig.AuditURL
 	}
 
 	return b
 }
 
-// WithEnableHTTPS устанавливает режим HTTPS из переменной окружения ENABLE_HTTPS
-// или флага командной строки -s.
+// WithEnableHTTPS устанавливает режим HTTPS из переменной окружения ENABLE_HTTPS,
 func (b *AppConfigBuilder) WithEnableHTTPS() *AppConfigBuilder {
 	def := false
+
+	if b.jsonConfig != nil && b.jsonConfig.EnableHTTPS {
+		def = true
+	}
 
 	if b.flagsConfig.EnableHTTPS != nil && *b.flagsConfig.EnableHTTPS {
 		def = true
@@ -289,6 +406,9 @@ func (b *AppConfigBuilder) loadBoolVariableFromEnv(envName string, Default *bool
 // CreateFLagsInitialConfig создает и инициализирует FlagsInitialConfig с флагами командной строки.
 // Флаги должны быть распарсены с помощью flag.Parse() перед использованием.
 func CreateFLagsInitialConfig() *FlagsInitialConfig {
+	configPath := flag.String("c", "", "path to JSON config file")
+	flag.StringVar(configPath, "config", "", "path to JSON config file")
+
 	return &FlagsInitialConfig{
 		StartupAddress: flag.String("a", "", "startup address"),
 		BaseURL:        flag.String("b", "", "short links url prefix"),
@@ -299,13 +419,21 @@ func CreateFLagsInitialConfig() *FlagsInitialConfig {
 		AuditURL:    flag.String("audit-url", "", "audit HTTP endpoint URL"),
 		AuditFile:   flag.String("audit-file", "", "audit log file path"),
 		EnableHTTPS: flag.Bool("s", false, "enable HTTPS mode"),
+		ConfigPath:  configPath,
 	}
 }
 
-// GetConfig создает полную конфигурацию приложения из флагов и переменных окружения.
+// GetConfig создает полную конфигурацию приложения из флагов, переменных окружения и JSON-файла.
 // Возвращает готовую конфигурацию или ошибки, возникшие при ее построении.
 var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
-	return NewAppConfigBuilder(flagsConfig).
+	// Загружаем JSON конфигурацию
+	configPath := getConfigPath(flagsConfig.ConfigPath)
+	jsonConfig, err := LoadJSONConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load JSON config: %w", err)
+	}
+
+	return NewAppConfigBuilder(flagsConfig, jsonConfig).
 		WithBaseURL().
 		WithDatabaseDSN().
 		WithStoragePath().
