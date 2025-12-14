@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
@@ -101,7 +102,7 @@ func main() {
 	// ёмкости 1 для канала будет достаточно
 	sigint := make(chan os.Signal, 1)
 	// регистрируем перенаправление прерываний
-	signal.Notify(sigint, os.Interrupt)
+	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	// запускаем горутину обработки пойманных прерываний
 	go func() {
