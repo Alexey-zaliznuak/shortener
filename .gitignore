@@ -27,3 +27,8 @@ vendor/
 .env
 
 test*.py
+
+txt.txt
+*.gz
+
+docs/

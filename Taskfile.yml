@@ -10,13 +10,20 @@ vars:
 tasks:
   default:
     desc: "Собрать и сразу запустить с параметрами"
-      # - '{{ .MAIN }}/{{ .BINARY_NAME }} -a=localhost:8080 -b=http://localhost:8080/'
+    deps:
+      - build
     cmds:
-      - go build -o {{.MAIN}} {{.MAIN}}
       - '{{ .MAIN }}/{{ .BINARY_NAME }}'
+
+  swag:
+    desc: "Собрать и сразу запустить с параметрами"
+    cmds:
+      - swag init -g cmd/shortener/main.go
 
   build:
     desc: "Собрать бинарник"
+    deps:
+      - swag
     cmds:
       - go build -o {{.MAIN}} {{.MAIN}}
 
@@ -35,20 +42,27 @@ tasks:
     deps:
       - test
 
-  run:
-    desc: "Запустить собранный бинарник"
+  lint:
+    desc: "Форматирование"
     cmds:
-      - '{{.MAIN}}.exe'
+      - gofmt -w .
+      - goimports -w .
 
-  r:
-    desc: "Алиас для run"
-    deps:
-      - run
-
-  st:
-    desc: "Запустить конкретный тест через shortenertest-windows-amd64"
+  linter:
+    desc: "Запустить кастомный линтер"
     cmds:
-      - ./shortenertest-windows-amd64 -test.v -test.run=^TestIteration2 -binary-path={{.MAIN}}.exe
+      - go build -o bin/linter.exe ./cmd/linter
+      - ./bin/linter.exe ./...
+
+  bench:
+    desc: "Бенчмарки"
+    cmds:
+      - go test -bench . -benchmem
+
+  godoc:
+    desc: "Документация"
+    cmds:
+      - pkgsite -open
 
   high-load:
     desc: "100 000 запросов на создание"

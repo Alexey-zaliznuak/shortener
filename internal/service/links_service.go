@@ -8,8 +8,8 @@ import (
 	"net/url"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
-	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
+	"github.com/Alexey-zaliznuak/shortener/internal/repository"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/gin-gonic/gin"
@@ -17,6 +17,7 @@ import (
 
 type LinksService struct {
 	repository link.LinkRepository
+	auth       *AuthService
 	*config.AppConfig
 }
 
@@ -28,9 +29,37 @@ func (s *LinksService) GetFullURLFromShort(shortcut string) (string, error) {
 	return link.FullURL, nil
 }
 
-func (s *LinksService) CreateLink(link *model.Link) (*model.Link, bool, error) {
+func (s *LinksService) GetUserLinks(c *gin.Context) ([]*model.GetUserLinksRequestItem, error) {
+	claims, err := s.auth.GetAuthorization(c)
+
+	if err != nil {
+		return nil, err
+	}
+
+	links, err := s.repository.GetByUserID(claims.UserID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, l := range links {
+		l.Shortcut, err = s.BuildShortURL(l.Shortcut, c)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return links, err
+}
+
+func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*model.Link, *repository.Claims, bool, error) {
+	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
+
+	if err != nil {
+		return nil, nil, false, err
+	}
+
 	if !s.isValidURL(link.FullURL) {
-		return link, false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		return link.NewLink(auth.UserID), nil, false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
 	if link.Shortcut == "" {
@@ -39,15 +68,35 @@ func (s *LinksService) CreateLink(link *model.Link) (*model.Link, bool, error) {
 		link.Shortcut, err = s.createUniqueShortcut()
 
 		if err != nil {
-			return link, false, err
+			return link.NewLink(auth.UserID), auth, false, err
 		}
 	}
+	l, created, err := s.repository.Create(link, auth.UserID, nil)
 
-	return s.repository.Create(link, nil)
+	return l, auth, created, err
+}
+
+func (s *LinksService) DeleteUserLinks(shortcuts []string, c *gin.Context) error {
+	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(auth)
+	fmt.Println(shortcuts)
+
+	return s.repository.DeleteUserLinks(shortcuts, auth.UserID)
 }
 
 func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWithCorrelationIDRequestItem, c *gin.Context) ([]*model.CreateLinkWithCorrelationIDResponseItem, error) {
 	var result []*model.CreateLinkWithCorrelationIDResponseItem
+
+	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
+
+	if err != nil {
+		return nil, err
+	}
 
 	transactionExecuter, err := s.repository.GetTransactionExecuter(context.Background(), nil)
 	supportTransaction := true
@@ -76,9 +125,9 @@ func (s *LinksService) BulkCreateWithCorrelationID(links []*model.CreateLinkWith
 			return nil, err
 		}
 
-		newLink := &model.Link{FullURL: link.FullURL, Shortcut: shortcut}
+		l := &model.CreateLinkDto{FullURL: link.FullURL, Shortcut: shortcut}
 
-		newLink, _, err = s.repository.Create(newLink, transactionExecuter)
+		newLink, _, err := s.repository.Create(l, auth.UserID, transactionExecuter)
 
 		if err != nil {
 			if supportTransaction {
@@ -129,7 +178,6 @@ func (s *LinksService) createUniqueShortcut() (string, error) {
 	}
 
 	if _, err := s.repository.GetByShortcut(newShortcut); err != database.ErrNotFound {
-		logger.Log.Error(err.Error())
 		return "", fmt.Errorf("create link error: could not generate unique shortcut after %d attempts", maxAttempts)
 	}
 
@@ -171,6 +219,7 @@ func (s *LinksService) isValidURL(u string) bool {
 func NewLinksService(repository link.LinkRepository, config *config.AppConfig) *LinksService {
 	return &LinksService{
 		repository: repository,
+		auth:       NewAuthService(config),
 		AppConfig:  config,
 	}
 }
