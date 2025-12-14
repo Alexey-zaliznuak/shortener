@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"os"
 	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
@@ -54,7 +54,6 @@ func main() {
 	}
 
 	logger.Initialize(cfg.LoggingLevel)
-	defer logger.Log.Sync()
 
 	logger.Log.Info("Configuration", zap.Any("config", cfg))
 
@@ -70,7 +69,6 @@ func main() {
 	if err != nil {
 		logger.Log.Fatal(err.Error())
 	}
-	defer func() { utils.LogErrorWrapper(linksRepository.SaveInStorage()) }()
 
 	if err := linksRepository.LoadStoredData(); err != nil {
 		logger.Log.Fatal(err.Error())
@@ -94,54 +92,75 @@ func main() {
 	handler.RegisterAppHandlerRoutes(router, db)
 
 	// Server process
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
 	srv := &http.Server{Addr: cfg.Server.Address, Handler: router}
 
+	// через этот канал сообщим основному потоку, что соединения закрыты
+	idleConnsClosed := make(chan struct{})
+	// канал для перенаправления прерываний
+	// поскольку нужно отловить всего одно прерывание,
+	// ёмкости 1 для канала будет достаточно
+	sigint := make(chan os.Signal, 1)
+	// регистрируем перенаправление прерываний
+	signal.Notify(sigint, os.Interrupt)
+
+	// запускаем горутину обработки пойманных прерываний
 	go func() {
-		if cfg.Server.EnableHTTPS {
-			logger.Log.Info("Starting server with HTTPS", zap.String("address", cfg.Server.Address))
+		// читаем из канала прерываний
+		// поскольку нужно прочитать только одно прерывание,
+		// можно обойтись без цикла
+		<-sigint
+		logger.Log.Info("shutting down gracefully, press Ctrl+C again to force")
 
-			tlsConfig, err := createTLSConfig()
-			if err != nil {
-				logger.Log.Fatal(fmt.Errorf("failed to create TLS config: %w", err).Error())
-			}
-			srv.TLSConfig = tlsConfig
+		// получили сигнал os.Interrupt, запускаем процедуру graceful shutdown
+		// контекст с таймаутом 5 секунд для завершения обработки текущих запросов
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-			if err := srv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-				logger.Log.Fatal(fmt.Errorf("listen TLS: %w", err).Error())
-			}
-		} else {
-			logger.Log.Info("Starting server with HTTP", zap.String("address", cfg.Server.Address))
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				logger.Log.Fatal(fmt.Errorf("listen: %w", err).Error())
-			}
+		if err := srv.Shutdown(ctx); err != nil {
+			// ошибки закрытия Listener
+			logger.Log.Error(fmt.Sprintf("HTTP server Shutdown: %v", err))
 		}
+		// сообщаем основному потоку,
+		// что все сетевые соединения обработаны и закрыты
+		close(idleConnsClosed)
 	}()
 
-	// go func() {
-	// 	logger.Log.Info("pprof listening on :9090")
-	// 	http.ListenAndServe(":9090", nil)
-	// }()
+	if cfg.Server.EnableHTTPS {
+		logger.Log.Info("Starting server with HTTPS", zap.String("address", cfg.Server.Address))
 
-	// Listen for the interrupt signal.
-	<-ctx.Done()
+		tlsConfig, err := createTLSConfig()
+		if err != nil {
+			logger.Log.Fatal(fmt.Errorf("failed to create TLS config: %w", err).Error())
+		}
+		srv.TLSConfig = tlsConfig
 
-	stop()
-
-	logger.Log.Info("shutting down gracefully, press Ctrl+C again to force")
-
-	// The context is used to inform the server it has 5 seconds to finish
-	// the request it is currently handling
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Log.Fatal(fmt.Errorf("server forced to shutdown: %w", err).Error())
+		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+			// ошибки старта или остановки Listener
+			logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServeTLS: %w", err).Error())
+		}
+	} else {
+		logger.Log.Info("Starting server with HTTP", zap.String("address", cfg.Server.Address))
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			// ошибки старта или остановки Listener
+			logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServe: %w", err).Error())
+		}
 	}
 
-	logger.Log.Info("Server exited")
+	// ждём завершения процедуры graceful shutdown
+	<-idleConnsClosed
+
+	// получили оповещение о завершении
+	// здесь освобождаем ресурсы перед выходом
+	if db != nil {
+		if err := db.Close(); err != nil {
+			logger.Log.Error(fmt.Sprintf("Error closing database: %v", err))
+		}
+	}
+
+	utils.LogErrorWrapper(linksRepository.SaveInStorage())
+	logger.Log.Sync()
+
+	logger.Log.Info("Server Shutdown gracefully")
 }
 
 // createTLSConfig создает конфигурацию TLS с самоподписанным сертификатом.
