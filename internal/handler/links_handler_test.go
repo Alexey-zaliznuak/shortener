@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
+	"github.com/Alexey-zaliznuak/shortener/internal/handler/audit"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
@@ -92,9 +93,10 @@ func Test_links_createLink(t *testing.T) {
 	}
 
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
+	authService := service.NewAuthService(cfg)
 	require.NoError(t, err)
 
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, audit.NewAuditorShortURLOperationManager(), db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -145,7 +147,7 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 			},
 		},
 		{
-			name:        "Create link with exists short URL",
+			name:        "Create link with exists short URL 1",
 			requestBody: fmt.Sprintf(`{"url": "%s"}`, generateRandomURL()),
 			want: want{
 				code:                http.StatusCreated,
@@ -179,7 +181,8 @@ func Test_links_createLinkWithJSONAPI(t *testing.T) {
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
 	require.NoError(t, err)
 
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
+	authService := service.NewAuthService(cfg)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, audit.NewAuditorShortURLOperationManager(), db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -231,7 +234,8 @@ func Test_links_CreateAndGet(t *testing.T) {
 	r, err := link.NewLinksRepository(context.Background(), cfg, db)
 	require.NoError(t, err)
 
-	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), db)
+	authService := service.NewAuthService(cfg)
+	RegisterLinksRoutes(router, service.NewLinksService(r, cfg), authService, audit.NewAuditorShortURLOperationManager(), db)
 
 	server := httptest.NewServer(router)
 	defer server.Close()

@@ -18,26 +18,47 @@ import (
 )
 
 type InMemoryLinkRepository struct {
-	storage map[string]*model.Link // для удобства будем хранить и ссылки и шорткаты
-	mu      sync.RWMutex
-	config  *config.AppConfig
+	shortStorage map[string]*model.Link
+	fullStorage  map[string]*model.Link
+
+	shortMu sync.RWMutex
+	fullMu  sync.RWMutex
+
+	config *config.AppConfig
 }
 
 func (r *InMemoryLinkRepository) GetByShortcut(shortcut string) (*model.Link, error) {
-	r.mu.RLock()
-	l, ok := r.storage[shortcut]
-	r.mu.RUnlock()
+	r.shortMu.RLock()
+	l, ok := r.shortStorage[shortcut]
+	r.shortMu.RUnlock()
 
 	if ok {
+		if l.IsDeleted {
+			return nil, database.ErrObjectDeleted
+		}
 		return l, nil
 	}
 	return l, database.ErrNotFound
+}
+
+func (r *InMemoryLinkRepository) GetByUserID(userID string) ([]*model.GetUserLinksRequestItem, error) {
+	var result []*model.GetUserLinksRequestItem
+
+	r.shortMu.RLock()
+	for _, val := range r.shortStorage {
+		if val.UserID == userID {
+			result = append(result, &model.GetUserLinksRequestItem{Shortcut: val.Shortcut, FullURL: val.FullURL})
+		}
+	}
+	r.shortMu.RUnlock()
+
+	return result, nil
 }
 
 func (r *InMemoryLinkRepository) GetByFullURL(url string) (*model.Link, error) {
-	r.mu.RLock()
-	l, ok := r.storage[url]
-	r.mu.RUnlock()
+	r.fullMu.RLock()
+	l, ok := r.fullStorage[url]
+	r.fullMu.RUnlock()
 
 	if ok {
 		return l, nil
@@ -45,22 +66,49 @@ func (r *InMemoryLinkRepository) GetByFullURL(url string) (*model.Link, error) {
 	return l, database.ErrNotFound
 }
 
-func (r *InMemoryLinkRepository) Create(link *model.Link, executer database.Executer) (*model.Link, bool, error) {
+func (r *InMemoryLinkRepository) Create(link *model.CreateLinkDto, UserID string, executer database.Executer) (*model.Link, bool, error) {
 	l, err := r.GetByFullURL(link.FullURL)
 
 	if err != database.ErrNotFound {
 		if err != nil {
-			return link, false, err
+			return link.NewLink(UserID), false, err
 		}
 
 		return l, false, err
 	}
 
-	r.mu.Lock()
-	r.storage[link.Shortcut] = link
-	r.storage[link.FullURL] = link
-	r.mu.Unlock()
-	return link, true, nil
+	newLink := link.NewLink(UserID)
+
+	r.shortMu.Lock()
+	r.shortStorage[link.Shortcut] = newLink
+	r.shortMu.Unlock()
+
+	r.fullMu.Lock()
+	r.fullStorage[link.FullURL] = newLink
+	r.fullMu.Unlock()
+
+	return newLink, true, nil
+}
+
+func (r *InMemoryLinkRepository) DeleteUserLinks(shortcuts []string, userID string) error {
+	for _, shortcut := range shortcuts {
+		r.shortMu.Lock() // Используем Lock вместо RLock, т.к. изменяем данные
+
+		link, ok := r.shortStorage[shortcut]
+
+		if !ok {
+			r.shortMu.Unlock()
+			return database.ErrNotFound
+		}
+
+		if link.UserID == userID {
+			link.IsDeleted = true
+		}
+
+		r.shortMu.Unlock()
+	}
+
+	return nil
 }
 
 func (r *InMemoryLinkRepository) LoadStoredData() error {
@@ -85,7 +133,7 @@ func (r *InMemoryLinkRepository) LoadStoredData() error {
 	}
 
 	for _, link := range storedData {
-		r.Create(link, nil)
+		r.Create(link.ToCreateDto(), "", nil)
 	}
 
 	logger.Log.Info(fmt.Sprintf("Restored urls: %d", len(storedData)))
@@ -104,7 +152,7 @@ func (r *InMemoryLinkRepository) SaveInStorage() error {
 
 	defer func() { utils.LogErrorWrapper(file.Close()) }()
 
-	for _, link := range r.storage {
+	for _, link := range r.shortStorage {
 		storedData = append(storedData, link)
 	}
 
@@ -124,5 +172,5 @@ func (r *InMemoryLinkRepository) GetTransactionExecuter(ctx context.Context, opt
 }
 
 func NewInMemoryLinksRepository(config *config.AppConfig) *InMemoryLinkRepository {
-	return &InMemoryLinkRepository{config: config, storage: make(map[string]*model.Link)}
+	return &InMemoryLinkRepository{config: config, shortStorage: make(map[string]*model.Link), fullStorage: make(map[string]*model.Link)}
 }
