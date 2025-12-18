@@ -32,3 +32,4 @@ txt.txt
 *.gz
 
 docs/
+*.pem
