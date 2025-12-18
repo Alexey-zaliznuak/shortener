@@ -31,6 +31,11 @@ import (
 	_ "net/http/pprof"
 )
 
+const (
+	certFile = "cert.pem"
+	keyFile  = "key.pem"
+)
+
 var (
 	buildVersion string = "N/A"
 	buildDate    string = "N/A"
@@ -140,11 +145,6 @@ func main() {
 
 	logger.Log.Info("Server Shutdown gracefully")
 }
-
-const (
-	certFile = "cert.pem"
-	keyFile  = "key.pem"
-)
 
 // createTLSConfig создает конфигурацию TLS с сертификатом.
 func createTLSConfig() (*tls.Config, error) {
