@@ -95,35 +95,19 @@ func main() {
 	// Server process
 	srv := &http.Server{Addr: cfg.Server.Address, Handler: router}
 
-	// через этот канал сообщим основному потоку, что соединения закрыты
-	idleConnsClosed := make(chan struct{})
-	// канал для перенаправления прерываний
-	// поскольку нужно отловить всего одно прерывание,
-	// ёмкости 1 для канала будет достаточно
-	sigint := make(chan os.Signal, 1)
-	// регистрируем перенаправление прерываний
-	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer stop()
 
-	// запускаем горутину обработки пойманных прерываний
 	go func() {
-		// читаем из канала прерываний
-		// поскольку нужно прочитать только одно прерывание,
-		// можно обойтись без цикла
-		<-sigint
+		<-ctx.Done()
 		logger.Log.Info("shutting down gracefully, press Ctrl+C again to force")
 
-		// получили сигнал os.Interrupt, запускаем процедуру graceful shutdown
-		// контекст с таймаутом 5 секунд для завершения обработки текущих запросов
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		if err := srv.Shutdown(ctx); err != nil {
-			// ошибки закрытия Listener
+		if err := srv.Shutdown(shutdownCtx); err != nil {
 			logger.Log.Error(fmt.Sprintf("HTTP server Shutdown: %v", err))
 		}
-		// сообщаем основному потоку,
-		// что все сетевые соединения обработаны и закрыты
-		close(idleConnsClosed)
 	}()
 
 	if cfg.Server.EnableHTTPS {
@@ -136,22 +120,15 @@ func main() {
 		srv.TLSConfig = tlsConfig
 
 		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
-			// ошибки старта или остановки Listener
 			logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServeTLS: %w", err).Error())
 		}
 	} else {
 		logger.Log.Info("Starting server with HTTP", zap.String("address", cfg.Server.Address))
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			// ошибки старта или остановки Listener
 			logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServe: %w", err).Error())
 		}
 	}
 
-	// ждём завершения процедуры graceful shutdown
-	<-idleConnsClosed
-
-	// получили оповещение о завершении
-	// здесь освобождаем ресурсы перед выходом
 	if db != nil {
 		if err := db.Close(); err != nil {
 			logger.Log.Error(fmt.Sprintf("Error closing database: %v", err))
@@ -164,12 +141,56 @@ func main() {
 	logger.Log.Info("Server Shutdown gracefully")
 }
 
-// createTLSConfig создает конфигурацию TLS с самоподписанным сертификатом.
+const (
+	certFile = "cert.pem"
+	keyFile  = "key.pem"
+)
+
+// createTLSConfig создает конфигурацию TLS с сертификатом.
 func createTLSConfig() (*tls.Config, error) {
+	cert, err := getOrCreateCert()
+	if err != nil {
+		return nil, err
+	}
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}, nil
+}
+
+func getOrCreateCert() (tls.Certificate, error) {
+	if fileExists(certFile) && fileExists(keyFile) {
+		logger.Log.Info("Loading existing certificate", zap.String("cert", certFile), zap.String("key", keyFile))
+		return tls.LoadX509KeyPair(certFile, keyFile)
+	}
+
+	logger.Log.Info("Certificate files not found, generating new certificate")
+
+	certPEM, keyPEM, err := generateCert()
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to generate certificate: %w", err)
+	}
+
+	// Сохраняем сертификат и ключ в файлы
+	if err := os.WriteFile(certFile, certPEM, 0644); err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to save certificate: %w", err)
+	}
+
+	if err := os.WriteFile(keyFile, keyPEM, 0600); err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to save private key: %w", err)
+	}
+
+	logger.Log.Info("Certificate saved", zap.String("cert", certFile), zap.String("key", keyFile))
+
+	return tls.X509KeyPair(certPEM, keyPEM)
+}
+
+// generateCert генерирует самоподписанный сертификат и приватный ключ.
+func generateCert() (certPEM []byte, keyPEM []byte, err error) {
 	// Генерируем приватный ключ RSA
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate private key: %w", err)
+		return nil, nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// Создаем шаблон сертификата
@@ -190,22 +211,20 @@ func createTLSConfig() (*tls.Config, error) {
 	// Создаем самоподписанный сертификат
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create certificate: %w", err)
+		return nil, nil, fmt.Errorf("failed to create certificate: %w", err)
 	}
 
 	// Кодируем сертификат в PEM
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	certPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 
 	// Кодируем приватный ключ в PEM
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})
+	keyPEM = pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})
 
-	// Загружаем сертификат и ключ
-	cert, err := tls.X509KeyPair(certPEM, keyPEM)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load key pair: %w", err)
-	}
+	return certPEM, keyPEM, nil
+}
 
-	return &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}, nil
+// fileExists проверяет существование файла.
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
