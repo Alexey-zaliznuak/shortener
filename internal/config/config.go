@@ -35,6 +35,9 @@ type FlagsInitialConfig struct {
 	AuditURL *string
 	// AuditFile содержит путь к файлу логов аудита.
 	AuditFile *string
+
+	// EnableHTTPS включает HTTPS режим для сервера.
+	EnableHTTPS *bool
 }
 
 // DBConfig содержит конфигурацию базы данных и хранилища.
@@ -80,6 +83,8 @@ type AppConfig struct {
 		Address string
 		// ShortLinksLength содержит длину генерируемых коротких ссылок.
 		ShortLinksLength int
+		// EnableHTTPS включает HTTPS режим для сервера.
+		EnableHTTPS bool
 	}
 }
 
@@ -204,6 +209,20 @@ func (b *AppConfigBuilder) WithAuditURL() *AppConfigBuilder {
 	return b
 }
 
+// WithEnableHTTPS устанавливает режим HTTPS из переменной окружения ENABLE_HTTPS
+// или флага командной строки -s.
+func (b *AppConfigBuilder) WithEnableHTTPS() *AppConfigBuilder {
+	def := false
+
+	if b.flagsConfig.EnableHTTPS != nil && *b.flagsConfig.EnableHTTPS {
+		def = true
+	}
+
+	b.config.Server.EnableHTTPS = b.loadBoolVariableFromEnv("ENABLE_HTTPS", &def)
+
+	return b
+}
+
 // Build завершает построение конфигурации и возвращает готовую AppConfig.
 // Если при построении возникли ошибки, они возвращаются объединенными.
 func (b *AppConfigBuilder) Build() (*AppConfig, error) {
@@ -246,6 +265,27 @@ func (b *AppConfigBuilder) loadIntVariableFromEnv(envName string, Default *int) 
 	return numericValue
 }
 
+// loadBoolVariableFromEnv загружает булево значение из переменной окружения.
+// Значение преобразуется из строки в bool. Поддерживаемые значения: "true", "1", "false", "0", "".
+func (b *AppConfigBuilder) loadBoolVariableFromEnv(envName string, Default *bool) bool {
+	envValue := os.Getenv(envName)
+
+	if envValue == "" {
+		if Default != nil {
+			return *Default
+		}
+		return false
+	}
+
+	boolValue, err := strconv.ParseBool(envValue)
+	if err != nil {
+		b.Errors = append(b.Errors, fmt.Errorf("configuration error: could not convert %s to bool: %w", envName, err))
+		return false
+	}
+
+	return boolValue
+}
+
 // CreateFLagsInitialConfig создает и инициализирует FlagsInitialConfig с флагами командной строки.
 // Флаги должны быть распарсены с помощью flag.Parse() перед использованием.
 func CreateFLagsInitialConfig() *FlagsInitialConfig {
@@ -258,6 +298,7 @@ func CreateFLagsInitialConfig() *FlagsInitialConfig {
 		StoragePath: flag.String("f", "", "storage path to save dump and load all data"),
 		AuditURL:    flag.String("audit-url", "", "audit HTTP endpoint URL"),
 		AuditFile:   flag.String("audit-file", "", "audit log file path"),
+		EnableHTTPS: flag.Bool("s", false, "enable HTTPS mode"),
 	}
 }
 
@@ -275,5 +316,6 @@ var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
 		WithTokenLifeTime().
 		WithAuditFile().
 		WithAuditURL().
+		WithEnableHTTPS().
 		Build()
 }
