@@ -327,6 +327,29 @@ func (r *PostgreSQLLinksRepository) GetTransactionExecuter(ctx context.Context, 
 	return r.db.BeginTx(ctx, opts)
 }
 
+func (r *PostgreSQLLinksRepository) GetStats() (urls int, users int, err error) {
+	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+	defer cancel()
+
+	row := r.db.QueryRowContext(
+		ctx,
+		fmt.Sprintf(`SELECT COUNT(*) FROM %s`, r.table),
+	)
+	if err = row.Scan(&urls); err != nil {
+		return 0, 0, err
+	}
+
+	row = r.db.QueryRowContext(
+		ctx,
+		fmt.Sprintf(`SELECT COUNT(DISTINCT userID) FROM %s`, r.table),
+	)
+	if err = row.Scan(&users); err != nil {
+		return 0, 0, err
+	}
+
+	return urls, users, nil
+}
+
 func NewInPostgresSQLLinksRepository(ctx context.Context, config *config.AppConfig, db *sql.DB) (*PostgreSQLLinksRepository, error) {
 	return &PostgreSQLLinksRepository{
 		db:     db,
