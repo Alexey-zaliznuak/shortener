@@ -17,6 +17,7 @@ type LinkRepository interface {
 	LoadStoredData() error
 	SaveInStorage() error
 	GetTransactionExecuter(ctx context.Context, opts *sql.TxOptions) (database.TransactionExecuter, error)
+	GetStats() (urls int, users int, err error)
 }
 
 func NewLinksRepository(ctx context.Context, cfg *config.AppConfig, db *sql.DB) (LinkRepository, error) {

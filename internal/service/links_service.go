@@ -216,6 +216,11 @@ func (s *LinksService) isValidURL(u string) bool {
 	return true
 }
 
+// Немного странно что я по сути просто вызываю репо, может стоит дергать репо напрямую(service.Repository.GetStats)?
+func (s *LinksService) GetStats() (urls int, users int, err error) {
+	return s.repository.GetStats()
+}
+
 func NewLinksService(repository link.LinkRepository, config *config.AppConfig) *LinksService {
 	return &LinksService{
 		repository: repository,

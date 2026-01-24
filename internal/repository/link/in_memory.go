@@ -171,6 +171,23 @@ func (r *InMemoryLinkRepository) GetTransactionExecuter(ctx context.Context, opt
 	return nil, database.ErrExecuterNotSupportTransactions
 }
 
+func (r *InMemoryLinkRepository) GetStats() (urls int, users int, err error) {
+	r.shortMu.RLock()
+	defer r.shortMu.RUnlock()
+
+	urls = len(r.shortStorage)
+
+	uniqueUsers := make(map[string]struct{})
+	for _, link := range r.shortStorage {
+		if link.UserID != "" {
+			uniqueUsers[link.UserID] = struct{}{}
+		}
+	}
+	users = len(uniqueUsers)
+
+	return urls, users, nil
+}
+
 func NewInMemoryLinksRepository(config *config.AppConfig) *InMemoryLinkRepository {
 	return &InMemoryLinkRepository{config: config, shortStorage: make(map[string]*model.Link), fullStorage: make(map[string]*model.Link)}
 }
