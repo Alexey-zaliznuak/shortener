@@ -50,6 +50,12 @@ git fetch template && git checkout template/v2 .github
 3. Значения по умолчанию
 https://github.com/golangci/golangci-lint in github ci
 
+## Сборка
+При билде вручную можно указать следующие параметры:
+"-X main.buildCommit=v1.0.0"
+"-X main.buildDate=2000-10-10"
+"-X main.buildCommit=newSuperDatabaseOptimizations"
+
 # Migrations
 migrate create -ext sql -dir migrations -seq add_users_table
 
@@ -59,3 +65,4 @@ https://github.com/Yandex-Practicum/go-autotests/blob/main/cmd/shortenertest_v2/
 # профилирование(сделал 1 инстанс парсера jwt что на большом количестве запросов сэкономило достаточно памяти)
 
 ![Профилирование](image.png)
+
