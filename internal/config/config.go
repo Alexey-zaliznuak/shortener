@@ -37,7 +37,7 @@ type JSONConfig struct {
 	// AuditURL содержит URL для аудита (аналог флага -audit-url).
 	AuditURL string `json:"audit_url"`
 	// AuditFile содержит путь к файлу аудита (аналог флага -audit-file).
-	AuditFile string `json:"audit_file"`
+	AuditFile     string `json:"audit_file"`
 	TrustedSubnet string `json:"trusted_subnet"`
 }
 
