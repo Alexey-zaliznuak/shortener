@@ -51,15 +51,26 @@ func (s *LinksService) GetUserLinks(c *gin.Context) ([]*model.GetUserLinksReques
 	return links, err
 }
 
-func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*model.Link, *repository.Claims, bool, error) {
+func (s *LinksService) GetUserLinksByUserID(userID string) ([]*model.GetUserLinksRequestItem, error) {
+	return s.repository.GetByUserID(userID)
+}
+
+// Наверно надо было выпилить отсюда весь auth и дергать его в хандлерах?
+func (s *LinksService) CreateLinkWithParseAuth(link *model.CreateLinkDto, c *gin.Context) (*model.Link, *repository.Claims, bool, error) {
 	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
 
 	if err != nil {
 		return nil, nil, false, err
 	}
 
+	newLink, created, err := s.CreateLink(link, auth.ID)
+
+	return newLink, auth, created, err
+}
+
+func (s *LinksService) CreateLink(link *model.CreateLinkDto, userId string) (*model.Link, bool, error) {
 	if !s.isValidURL(link.FullURL) {
-		return link.NewLink(auth.UserID), nil, false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		return link.NewLink(userId), false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
 	if link.Shortcut == "" {
@@ -68,12 +79,12 @@ func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*m
 		link.Shortcut, err = s.createUniqueShortcut()
 
 		if err != nil {
-			return link.NewLink(auth.UserID), auth, false, err
+			return link.NewLink(userId), false, err
 		}
 	}
-	l, created, err := s.repository.Create(link, auth.UserID, nil)
+	l, created, err := s.repository.Create(link, userId, nil)
 
-	return l, auth, created, err
+	return l, created, err
 }
 
 func (s *LinksService) DeleteUserLinks(shortcuts []string, c *gin.Context) error {

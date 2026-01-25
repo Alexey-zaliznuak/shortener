@@ -20,9 +20,22 @@ tasks:
     cmds:
       - swag init -g cmd/shortener/main.go
 
+  proto-gen:
+    desc: "Сгенерить go код на основе протобаф файлов"
+    cmds:
+      - >-
+        protoc
+        --go_out=.
+        --go_opt=paths=source_relative
+        --go-grpc_out=.
+        --go-grpc_opt=paths=source_relative
+        --go_opt=default_api_level=API_OPAQUE
+        internal/handler/protobuf/api.proto
+
   build:
     desc: "Собрать бинарник"
     deps:
+      - proto-gen
       - swag
     cmds:
       - go build -o {{.MAIN}} {{.MAIN}}

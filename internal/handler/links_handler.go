@@ -80,7 +80,7 @@ func createLink(linksService *service.LinksService, auditor *audit.AuditorShortU
 
 		link := &model.Link{FullURL: fullURL}
 
-		link, claims, created, err := linksService.CreateLink(link.ToCreateDto(), c)
+		link, claims, created, err := linksService.CreateLinkWithParseAuth(link.ToCreateDto(), c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -137,7 +137,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService, auditor *audit.Au
 
 		l := &model.CreateLinkDto{FullURL: request.FullURL}
 
-		link, claims, created, err := linksService.CreateLink(l, c)
+		link, claims, created, err := linksService.CreateLinkWithParseAuth(l, c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())

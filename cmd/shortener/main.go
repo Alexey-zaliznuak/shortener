@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,12 +22,14 @@ import (
 	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler/audit"
+	"github.com/Alexey-zaliznuak/shortener/internal/handler/protobuf"
 	"github.com/Alexey-zaliznuak/shortener/internal/logger"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/database"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository/link"
 	"github.com/Alexey-zaliznuak/shortener/internal/service"
 	"github.com/Alexey-zaliznuak/shortener/internal/utils"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	_ "net/http/pprof"
 )
@@ -103,36 +106,58 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer stop()
 
+	// Запуск gRPC сервера
+	grpcServer := grpc.NewServer()
+	protobuf.RegisterShortenerServiceServer(grpcServer, handler.NewShortenerGRPCService(linksService, authService))
+
 	go func() {
-		<-ctx.Done()
-		logger.Log.Info("shutting down gracefully, press Ctrl+C again to force")
+		listen, err := net.Listen("tcp", ":3200")
+		if err != nil {
+			logger.Log.Fatal("ошибка при инициализации gRPC listener", zap.Error(err))
+		}
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			logger.Log.Error(fmt.Sprintf("HTTP server Shutdown: %v", err))
+		logger.Log.Info("Starting gRPC server", zap.String("address", ":3200"))
+		if err := grpcServer.Serve(listen); err != nil {
+			logger.Log.Fatal("ошибка при работе gRPC сервера", zap.Error(err))
 		}
 	}()
 
-	if cfg.Server.EnableHTTPS {
-		logger.Log.Info("Starting server with HTTPS", zap.String("address", cfg.Server.Address))
+	// Запуск HTTP сервера
+	go func() {
+		if cfg.Server.EnableHTTPS {
+			logger.Log.Info("Starting server with HTTPS", zap.String("address", cfg.Server.Address))
 
-		tlsConfig, err := createTLSConfig()
-		if err != nil {
-			logger.Log.Fatal(fmt.Errorf("failed to create TLS config: %w", err).Error())
-		}
-		srv.TLSConfig = tlsConfig
+			tlsConfig, err := createTLSConfig()
+			if err != nil {
+				logger.Log.Fatal(fmt.Errorf("failed to create TLS config: %w", err).Error())
+			}
+			srv.TLSConfig = tlsConfig
 
-		if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
-			logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServeTLS: %w", err).Error())
+			if err := srv.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+				logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServeTLS: %w", err).Error())
+			}
+		} else {
+			logger.Log.Info("Starting server with HTTP", zap.String("address", cfg.Server.Address))
+			if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+				logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServe: %w", err).Error())
+			}
 		}
-	} else {
-		logger.Log.Info("Starting server with HTTP", zap.String("address", cfg.Server.Address))
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			logger.Log.Fatal(fmt.Errorf("HTTP server ListenAndServe: %w", err).Error())
-		}
+	}()
+
+	// Ожидание сигнала завершения
+	<-ctx.Done()
+	logger.Log.Info("shutting down gracefully, press Ctrl+C again to force")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Graceful shutdown для HTTP
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Error(fmt.Sprintf("HTTP server Shutdown: %v", err))
 	}
+
+	// Graceful shutdown для gRPC
+	grpcServer.GracefulStop()
 
 	if db != nil {
 		if err := db.Close(); err != nil {
