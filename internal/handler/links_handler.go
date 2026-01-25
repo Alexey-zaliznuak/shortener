@@ -6,8 +6,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 
+	"github.com/Alexey-zaliznuak/shortener/internal/config"
 	"github.com/Alexey-zaliznuak/shortener/internal/handler/audit"
 	"github.com/Alexey-zaliznuak/shortener/internal/model"
 	"github.com/Alexey-zaliznuak/shortener/internal/repository"
@@ -78,7 +80,7 @@ func createLink(linksService *service.LinksService, auditor *audit.AuditorShortU
 
 		link := &model.Link{FullURL: fullURL}
 
-		link, claims, created, err := linksService.CreateLink(link.ToCreateDto(), c)
+		link, claims, created, err := linksService.CreateLinkWithParseAuth(link.ToCreateDto(), c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -135,7 +137,7 @@ func createLinkWithJSONAPI(linksService *service.LinksService, auditor *audit.Au
 
 		l := &model.CreateLinkDto{FullURL: request.FullURL}
 
-		link, claims, created, err := linksService.CreateLink(l, c)
+		link, claims, created, err := linksService.CreateLinkWithParseAuth(l, c)
 
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -295,6 +297,60 @@ func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 	}
 }
 
+// getStats returns internal service statistics.
+// @Summary      Get service statistics
+// @Description  Returns the number of shortened URLs and users in the service
+// @Tags         internal
+// @Produce      json
+// @Success      200  {object}  model.StatsResponse  "Service statistics"
+// @Failure      403  "Forbidden - IP not in trusted subnet"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /api/internal/stats [get]
+func getStats(linksService *service.LinksService, cfg *config.AppConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Проверяем, что trusted_subnet настроен
+		if cfg.Server.TrustedSubnet == "" {
+			c.Status(http.StatusForbidden)
+			return
+		}
+
+		clientIP := c.GetHeader("X-Real-IP")
+		if clientIP == "" {
+			c.Status(http.StatusForbidden)
+			return
+		}
+
+		_, trustedNet, err := net.ParseCIDR(cfg.Server.TrustedSubnet)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "invalid trusted subnet configuration")
+			return
+		}
+
+		ip := net.ParseIP(clientIP)
+		if ip == nil {
+			c.Status(http.StatusForbidden)
+			return
+		}
+
+		// Проверяем, что IP входит в доверенную подсеть
+		if !trustedNet.Contains(ip) {
+			c.Status(http.StatusForbidden)
+			return
+		}
+
+		urls, users, err := linksService.GetStats()
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, &model.StatsResponse{
+			URLs:  urls,
+			Users: users,
+		})
+	}
+}
+
 // RegisterLinksRoutes registers all URL shortener routes to the provided Gin engine.
 // It sets up the following endpoints:
 //   - GET /:shortcut - redirect to full URL
@@ -303,6 +359,7 @@ func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 //   - POST /api/shorten/batch - create multiple short URLs
 //   - GET /api/user/urls - get all user's URLs
 //   - DELETE /api/user/urls - delete user's URLs
+//   - GET /api/internal/stats - get service statistics (requires trusted subnet)
 //
 // Parameters:
 //   - router: Gin engine instance to register routes on
@@ -310,7 +367,8 @@ func deleteUserLinks(linksService *service.LinksService) gin.HandlerFunc {
 //   - authService: service for user authentication
 //   - auditor: auditor for logging URL operations
 //   - db: database connection (currently unused, reserved for future use)
-func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager, db *sql.DB) {
+//   - cfg: application configuration
+func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService, authService *service.AuthService, auditor *audit.AuditorShortURLOperationManager, db *sql.DB, cfg *config.AppConfig) {
 	router.GET("/:shortcut", redirect(linksService, authService, auditor))
 
 	router.POST("/", createLink(linksService, auditor))
@@ -319,6 +377,8 @@ func RegisterLinksRoutes(router *gin.Engine, linksService *service.LinksService,
 
 	router.GET("/api/user/urls", getUserLinks(linksService, authService))
 	router.DELETE("/api/user/urls", deleteUserLinks(linksService))
+
+	router.GET("/api/internal/stats", getStats(linksService, cfg))
 
 	// router.GET("/api/public/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }

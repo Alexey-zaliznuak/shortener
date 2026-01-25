@@ -51,15 +51,26 @@ func (s *LinksService) GetUserLinks(c *gin.Context) ([]*model.GetUserLinksReques
 	return links, err
 }
 
-func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*model.Link, *repository.Claims, bool, error) {
+func (s *LinksService) GetUserLinksByUserID(userID string) ([]*model.GetUserLinksRequestItem, error) {
+	return s.repository.GetByUserID(userID)
+}
+
+// Наверно надо было выпилить отсюда весь auth и дергать его в хандлерах?
+func (s *LinksService) CreateLinkWithParseAuth(link *model.CreateLinkDto, c *gin.Context) (*model.Link, *repository.Claims, bool, error) {
 	auth, err := s.auth.GetOrCreateAndSaveAuthorization(c)
 
 	if err != nil {
 		return nil, nil, false, err
 	}
 
+	newLink, created, err := s.CreateLink(link, auth.ID)
+
+	return newLink, auth, created, err
+}
+
+func (s *LinksService) CreateLink(link *model.CreateLinkDto, userID string) (*model.Link, bool, error) {
 	if !s.isValidURL(link.FullURL) {
-		return link.NewLink(auth.UserID), nil, false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		return link.NewLink(userID), false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
 	if link.Shortcut == "" {
@@ -68,12 +79,12 @@ func (s *LinksService) CreateLink(link *model.CreateLinkDto, c *gin.Context) (*m
 		link.Shortcut, err = s.createUniqueShortcut()
 
 		if err != nil {
-			return link.NewLink(auth.UserID), auth, false, err
+			return link.NewLink(userID), false, err
 		}
 	}
-	l, created, err := s.repository.Create(link, auth.UserID, nil)
+	l, created, err := s.repository.Create(link, userID, nil)
 
-	return l, auth, created, err
+	return l, created, err
 }
 
 func (s *LinksService) DeleteUserLinks(shortcuts []string, c *gin.Context) error {
@@ -214,6 +225,11 @@ func (s *LinksService) isValidURL(u string) bool {
 	}
 
 	return true
+}
+
+// Немного странно что я по сути просто вызываю репо, может стоит дергать репо напрямую(service.Repository.GetStats)?
+func (s *LinksService) GetStats() (urls int, users int, err error) {
+	return s.repository.GetStats()
 }
 
 func NewLinksService(repository link.LinkRepository, config *config.AppConfig) *LinksService {

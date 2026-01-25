@@ -37,7 +37,8 @@ type JSONConfig struct {
 	// AuditURL содержит URL для аудита (аналог флага -audit-url).
 	AuditURL string `json:"audit_url"`
 	// AuditFile содержит путь к файлу аудита (аналог флага -audit-file).
-	AuditFile string `json:"audit_file"`
+	AuditFile     string `json:"audit_file"`
+	TrustedSubnet string `json:"trusted_subnet"`
 }
 
 // LoadJSONConfig загружает конфигурацию из JSON-файла.
@@ -102,6 +103,8 @@ type FlagsInitialConfig struct {
 
 	// ConfigPath содержит путь к файлу конфигурации JSON.
 	ConfigPath *string
+
+	TrustedSubnet *string
 }
 
 // DBConfig содержит конфигурацию базы данных и хранилища.
@@ -149,6 +152,8 @@ type AppConfig struct {
 		ShortLinksLength int
 		// EnableHTTPS включает HTTPS режим для сервера.
 		EnableHTTPS bool
+		// TrustedSubnet содержит CIDR доверенной подсети для доступа к внутренним эндпоинтам.
+		TrustedSubnet string
 	}
 }
 
@@ -340,6 +345,24 @@ func (b *AppConfigBuilder) WithEnableHTTPS() *AppConfigBuilder {
 	return b
 }
 
+// WithTrustedSubnet устанавливает CIDR доверенной подсети из переменной окружения TRUSTED_SUBNET,
+// флага -t или JSON-конфига.
+func (b *AppConfigBuilder) WithTrustedSubnet() *AppConfigBuilder {
+	def := ""
+
+	if b.jsonConfig != nil && b.jsonConfig.TrustedSubnet != "" {
+		def = b.jsonConfig.TrustedSubnet
+	}
+
+	if b.flagsConfig.TrustedSubnet != nil && *b.flagsConfig.TrustedSubnet != "" {
+		def = *b.flagsConfig.TrustedSubnet
+	}
+
+	b.config.Server.TrustedSubnet = b.loadOptionalStringVariableFromEnv("TRUSTED_SUBNET", &def)
+
+	return b
+}
+
 // Build завершает построение конфигурации и возвращает готовую AppConfig.
 // Если при построении возникли ошибки, они возвращаются объединенными.
 func (b *AppConfigBuilder) Build() (*AppConfig, error) {
@@ -358,6 +381,16 @@ func (b *AppConfigBuilder) loadStringVariableFromEnv(envName string, Default *st
 
 	if value == "" {
 		b.Errors = append(b.Errors, fmt.Errorf("configuration error: '%s' not specified", envName))
+	}
+
+	return value
+}
+
+func (b *AppConfigBuilder) loadOptionalStringVariableFromEnv(envName string, Default *string) string {
+	value := os.Getenv(envName)
+
+	if value == "" && Default != nil {
+		value = *Default
 	}
 
 	return value
@@ -415,11 +448,12 @@ func CreateFLagsInitialConfig() *FlagsInitialConfig {
 		DB: &DBFlagsInitialConfig{
 			DatabaseDSN: flag.String("d", "", "Database DSN"),
 		},
-		StoragePath: flag.String("f", "", "storage path to save dump and load all data"),
-		AuditURL:    flag.String("audit-url", "", "audit HTTP endpoint URL"),
-		AuditFile:   flag.String("audit-file", "", "audit log file path"),
-		EnableHTTPS: flag.Bool("s", false, "enable HTTPS mode"),
-		ConfigPath:  configPath,
+		StoragePath:   flag.String("f", "", "storage path to save dump and load all data"),
+		AuditURL:      flag.String("audit-url", "", "audit HTTP endpoint URL"),
+		AuditFile:     flag.String("audit-file", "", "audit log file path"),
+		EnableHTTPS:   flag.Bool("s", false, "enable HTTPS mode"),
+		TrustedSubnet: flag.String("t", "", "trusted subnet in CIDR notation"),
+		ConfigPath:    configPath,
 	}
 }
 
@@ -445,5 +479,6 @@ var GetConfig = func(flagsConfig *FlagsInitialConfig) (*AppConfig, error) {
 		WithAuditFile().
 		WithAuditURL().
 		WithEnableHTTPS().
+		WithTrustedSubnet().
 		Build()
 }

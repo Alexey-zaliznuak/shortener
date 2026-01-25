@@ -74,3 +74,11 @@ type CreateShortURLResponse struct {
 	// Result contains the result - the shortened URL.
 	Result string `json:"result"`
 }
+
+// StatsResponse represents a response with service statistics.
+type StatsResponse struct {
+	// URLs contains the total number of shortened URLs in the service.
+	URLs int `json:"urls"`
+	// Users contains the total number of users in the service.
+	Users int `json:"users"`
+}
