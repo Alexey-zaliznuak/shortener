@@ -68,9 +68,9 @@ func (s *LinksService) CreateLinkWithParseAuth(link *model.CreateLinkDto, c *gin
 	return newLink, auth, created, err
 }
 
-func (s *LinksService) CreateLink(link *model.CreateLinkDto, userId string) (*model.Link, bool, error) {
+func (s *LinksService) CreateLink(link *model.CreateLinkDto, userID string) (*model.Link, bool, error) {
 	if !s.isValidURL(link.FullURL) {
-		return link.NewLink(userId), false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
+		return link.NewLink(userID), false, fmt.Errorf("create link error: invalid URL: '%s'", link.FullURL)
 	}
 
 	if link.Shortcut == "" {
@@ -79,10 +79,10 @@ func (s *LinksService) CreateLink(link *model.CreateLinkDto, userId string) (*mo
 		link.Shortcut, err = s.createUniqueShortcut()
 
 		if err != nil {
-			return link.NewLink(userId), false, err
+			return link.NewLink(userID), false, err
 		}
 	}
-	l, created, err := s.repository.Create(link, userId, nil)
+	l, created, err := s.repository.Create(link, userID, nil)
 
 	return l, created, err
 }
